@@ -11,7 +11,6 @@ public class DoctorResponse {
 	private Long doctorId;
 	private String doctorNo;
 	private String doctorName;
-	private String gender;
 	private String phone;
 	private String email;
 
@@ -39,9 +38,6 @@ public class DoctorResponse {
 
 	public String getDoctorName() { return doctorName; }
 	public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
-
-	public String getGender() { return gender; }
-	public void setGender(String gender) { this.gender = gender; }
 
 	public String getPhone() { return phone; }
 	public void setPhone(String phone) { this.phone = phone; }
@@ -82,6 +78,3 @@ public class DoctorResponse {
 	public String getUpdatedAt() { return updatedAt; }
 	public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
 }
-
-
-

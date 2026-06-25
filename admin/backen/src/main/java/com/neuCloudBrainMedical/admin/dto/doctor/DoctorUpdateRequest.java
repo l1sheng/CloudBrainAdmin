@@ -15,9 +15,6 @@ public class DoctorUpdateRequest {
 	@Size(max = 50, message = "医生姓名长度不能超过50")
 	private String name;
 
-	@Pattern(regexp = "^(男|女|其他)?$", message = "性别仅允许：男/女/其他")
-	private String gender;
-
 	@Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
 	private String phone;
 
@@ -44,9 +41,6 @@ public class DoctorUpdateRequest {
 	public String getName() { return name; }
 	public void setName(String name) { this.name = name; }
 
-	public String getGender() { return gender; }
-	public void setGender(String gender) { this.gender = gender; }
-
 	public String getPhone() { return phone; }
 	public void setPhone(String phone) { this.phone = phone; }
 
@@ -71,6 +65,3 @@ public class DoctorUpdateRequest {
 	public String getIntroduction() { return introduction; }
 	public void setIntroduction(String introduction) { this.introduction = introduction; }
 }
-
-
-

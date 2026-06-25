@@ -186,7 +186,7 @@
                       v-if="getScheduleItem(row, d.dateStr, slot)"
                       class="slot-item"
                       :class="slotClass(row, d.dateStr, slot)"
-                      @click="openEditDialog(getScheduleItem(row, d.dateStr, slot))"
+                      @click="openDetailDialog(getScheduleItem(row, d.dateStr, slot))"
                     >
                       <span class="slot-label">{{ displayTimeSlot(slot) }}</span>
                       <span class="slot-info">{{ slotInfo(row, d.dateStr, slot) }}</span>
@@ -216,6 +216,106 @@
       </div>
       </div>
     </el-card>
+
+    <!-- 排班详情 + 挂号列表 弹窗 -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      :title="'排班详情 · ' + (detailSchedule?.doctorName || '')"
+      width="760px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div class="schedule-detail">
+        <div class="detail-meta">
+          <div class="meta-item">
+            <span class="meta-label">日期</span>
+            <span class="meta-value">{{ detailSchedule?.scheduleDate }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">时段</span>
+            <span class="meta-value">{{ timeSlotLabelMap[detailSchedule?.timeSlot] || '-' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">科室</span>
+            <span class="meta-value">{{ detailSchedule?.departmentName || '-' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">医生</span>
+            <span class="meta-value">{{ detailSchedule?.doctorName || '-' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">号源</span>
+            <span class="meta-value">
+              <el-tag
+                :type="detailSchedule && Number(detailSchedule.currentAppointments) >= Number(detailSchedule.maxAppointments) ? 'danger' : 'success'"
+                size="small"
+              >
+                {{ detailSchedule?.currentAppointments || 0 }} / {{ detailSchedule?.maxAppointments || 0 }}
+              </el-tag>
+            </span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">状态</span>
+            <span class="meta-value">{{ statusLabel(detailSchedule?.status) }}</span>
+          </div>
+        </div>
+
+        <div class="detail-divider"></div>
+
+        <div class="detail-section-title">挂号患者列表</div>
+        <el-table
+          :data="detailRegistrations"
+          border
+          stripe
+          v-loading="registrationsLoading"
+          style="width: 100%"
+          :empty-text="registrationsLoading ? '加载中...' : '该排班暂无挂号记录'"
+        >
+          <el-table-column prop="registrationNo" label="挂号单号" min-width="160" />
+          <el-table-column prop="patientName" label="患者名" width="120">
+            <template #default="{ row }">
+              <el-tag size="small" type="primary" effect="plain">{{ row.patientName || '-' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="queueNo" label="排队号" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.queueNo ? '' : 'info'">{{ row.queueNo || '-' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="source" label="来源" width="100" align="center" />
+          <el-table-column prop="feeStatus" label="缴费状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag
+                size="small"
+                :type="row.feeStatus === '已缴费' ? 'success' : row.feeStatus === '未缴费' ? 'warning' : 'info'"
+              >{{ row.feeStatus || '-' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag
+                size="small"
+                :type="row.status === '已完成' ? 'success' : row.status === '已取消' ? 'danger' : row.status === '已失约' ? 'warning' : 'info'"
+              >{{ row.status || '-' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="registrationFee" label="挂号费" width="100" align="right">
+            <template #default="{ row }">¥{{ row.registrationFee }}</template>
+          </el-table-column>
+          <el-table-column prop="registeredAt" label="挂号时间" min-width="180">
+            <template #default="{ row }">{{ formatDateTime(row.registeredAt) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          @click="handleOpenEditFromDetail"
+        >编辑排班</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 新增/编辑 弹窗 -->
     <el-dialog
@@ -554,6 +654,7 @@ import {
   listDepartments,
   listDoctors,
   listSchedules,
+  listScheduleRegistrations,
   rejectSuggestion,
   rejectSuggestionDetail,
   updateSchedule
@@ -566,8 +667,14 @@ const departments = ref([])
 const deptKeyword = ref('')
 const doctors = ref([])
 const rawList = ref([])
-const titleOptions = ref([]) // 职称选项：从后端医生数据动态提取
-const doctorTypeOptions = ref([]) // 医生类型选项：从后端医生数据动态提取
+const titleOptions = ref([])
+const doctorTypeOptions = ref([])
+
+// 详情弹窗状态
+const detailDialogVisible = ref(false)
+const detailSchedule = ref(null)
+const detailRegistrations = ref([])
+const registrationsLoading = ref(false)
 
 const queryForm = reactive({
   departmentId: null,
@@ -1124,6 +1231,39 @@ function openCreateDialog() {
   resetForm()
   isEdit.value = false
   dialogVisible.value = true
+}
+
+function formatDateTime(val) {
+  if (!val) return '-'
+  const str = String(val).replace('T', ' ')
+  return str.slice(0, 19)
+}
+
+function statusLabel(status) {
+  const map = { AVAILABLE: '可挂号', FULL: '已满', CANCELLED: '已取消' }
+  return map[status] || (status || '-')
+}
+
+async function openDetailDialog(item) {
+  if (!item) return
+  detailSchedule.value = item
+  detailRegistrations.value = []
+  detailDialogVisible.value = true
+  registrationsLoading.value = true
+  try {
+    detailRegistrations.value = await listScheduleRegistrations(item.id)
+  } catch (e) {
+    detailRegistrations.value = []
+  } finally {
+    registrationsLoading.value = false
+  }
+}
+
+function handleOpenEditFromDetail() {
+  if (!detailSchedule.value) return
+  const item = detailSchedule.value
+  detailDialogVisible.value = false
+  openEditDialog(item)
 }
 
 function openEditDialog(item) {
@@ -1703,6 +1843,40 @@ async function onRejectDetail(row) {
 .ai-summary b {
   color: #409eff;
   margin: 0 2px;
+}
+
+/* 排班详情弹窗 */
+.schedule-detail .detail-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 18px;
+}
+.schedule-detail .meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+.schedule-detail .meta-label {
+  font-size: 12px;
+  color: #909399;
+}
+.schedule-detail .meta-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+.schedule-detail .detail-divider {
+  margin: 16px 0;
+  border-top: 1px dashed #e4e7ed;
+}
+.schedule-detail .detail-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
 }
 </style>
 

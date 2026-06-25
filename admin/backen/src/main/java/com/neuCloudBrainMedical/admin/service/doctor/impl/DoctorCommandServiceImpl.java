@@ -69,7 +69,6 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		doctor.setDoctorType(request.getDoctorType() != null ? request.getDoctorType() : "主治");
 		doctor.setTitle(request.getTitle());
 		doctor.setSpecialty(request.getSpecialty());
-		doctor.setGender(request.getGender());
 		doctor.setHireDate(request.getHireDate());
 		doctor.setIntroduction(request.getIntroduction());
 		doctor.setStatus(Doctor.STATUS_ENABLED);
@@ -193,7 +192,6 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (needsUpdate(req.getDoctorType(), d.getDoctorType())) { d.setDoctorType(req.getDoctorType()); changed = true; }
 		if (needsUpdate(req.getTitle(), d.getTitle())) { d.setTitle(req.getTitle()); changed = true; }
 		if (needsUpdate(req.getSpecialty(), d.getSpecialty())) { d.setSpecialty(req.getSpecialty()); changed = true; }
-		if (needsUpdate(req.getGender(), d.getGender())) { d.setGender(req.getGender()); changed = true; }
 		if (needsUpdate(req.getHireDate(), d.getHireDate())) { d.setHireDate(req.getHireDate()); changed = true; }
 		if (needsUpdate(req.getIntroduction(), d.getIntroduction())) { d.setIntroduction(req.getIntroduction()); changed = true; }
 		return changed;
@@ -221,7 +219,3 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		});
 	}
 }
-
-
-
-

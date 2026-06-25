@@ -3,10 +3,15 @@
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleBatchCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleResponse;
+import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleRegistrationResponse;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleUpdateRequest;
 import com.neuCloudBrainMedical.admin.service.schedule.IScheduleCommandService;
 import com.neuCloudBrainMedical.admin.service.schedule.IScheduleQueryService;
+import com.neuCloudBrainMedical.admin.service.schedule.IScheduleRegistrationQueryService;
 import com.neuCloudBrainMedical.admin.util.Result;
+import java.time.LocalDate;
+import java.util.List;
+
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,9 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-import java.util.List;
-
 /**
  * 排班资源接口。
  * 资源路径：/api/admin/schedules
@@ -32,11 +34,14 @@ public class ScheduleController {
 
 	private final IScheduleQueryService scheduleQueryService;
 	private final IScheduleCommandService scheduleCommandService;
+	private final IScheduleRegistrationQueryService scheduleRegistrationQueryService;
 
 	public ScheduleController(IScheduleQueryService scheduleQueryService,
-			IScheduleCommandService scheduleCommandService) {
+			IScheduleCommandService scheduleCommandService,
+			IScheduleRegistrationQueryService scheduleRegistrationQueryService) {
 		this.scheduleQueryService = scheduleQueryService;
 		this.scheduleCommandService = scheduleCommandService;
+		this.scheduleRegistrationQueryService = scheduleRegistrationQueryService;
 	}
 
 	// ========== 查询 ==========
@@ -52,6 +57,11 @@ public class ScheduleController {
 	@GetMapping("/{id}")
 	public Result<ScheduleResponse> getScheduleDetail(@PathVariable Long id) {
 		return Result.success(scheduleQueryService.getScheduleDetail(id));
+	}
+
+	@GetMapping("/{id}/registrations")
+	public Result<List<ScheduleRegistrationResponse>> listRegistrations(@PathVariable Long id) {
+		return Result.success(scheduleRegistrationQueryService.listByScheduleId(id));
 	}
 
 	// ========== 命令 ==========
@@ -77,7 +87,3 @@ public class ScheduleController {
 		return Result.success();
 	}
 }
-
-
-
-

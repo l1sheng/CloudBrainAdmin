@@ -14,12 +14,12 @@ INSERT INTO sys_role (role_id, role_code, role_name, description, status)
 VALUES
   (1, 'ADMIN',  '管理员', '管理员端测试角色', 1),
   (2, 'DOCTOR', '医生',   '医生端测试角色',   1),
-  (3, 'PATIENT','患者',   '患者端测试角色',   1)
+  (3, 'PATIENT','患者',   '患者端测试角色',   1) AS new
 ON DUPLICATE KEY UPDATE
-  role_code = VALUES(role_code),
-  role_name = VALUES(role_name),
-  description = VALUES(description),
-  status = VALUES(status);
+  role_code = new.role_code,
+  role_name = new.role_name,
+  description = new.description,
+  status = new.status;
 
 -- ------------------------------------------------------------
 -- 2. 系统用户（admin + 60 个医生账号 + 10 个患者账号）
@@ -99,14 +99,14 @@ VALUES
   (68, 3, 'patient07','123456', '赵七',   '13900000007', 'patient07@example.com', 1),
   (69, 3, 'patient08','123456', '李八',   '13900000008', 'patient08@example.com', 1),
   (70, 3, 'patient09','123456', '王九',   '13900000009', 'patient09@example.com', 1),
-  (71, 3, 'patient10','123456', '冯十',   '13900000010', 'patient10@example.com', 1)
+  (71, 3, 'patient10','123456', '冯十',   '13900000010', 'patient10@example.com', 1) AS new
 ON DUPLICATE KEY UPDATE
-  role_id   = VALUES(role_id),
-  password  = VALUES(password),
-  real_name = VALUES(real_name),
-  phone     = VALUES(phone),
-  email     = VALUES(email),
-  status    = VALUES(status);
+  role_id   = new.role_id,
+  password  = new.password,
+  real_name = new.real_name,
+  phone     = new.phone,
+  email     = new.email,
+  status    = new.status;
 
 -- ------------------------------------------------------------
 -- 3. 科室（12 个顶级科室 + 4 个子科室 = 16 条，覆盖内科/外科/儿科/全科/医技）
@@ -131,18 +131,18 @@ VALUES
   (13, 'PEDIATRICS_N', '儿童神经专科', '儿科', '门诊一楼西', '010-82004568', '门诊楼一层 111 室',  7,  130, '儿童头痛、癫痫、发育迟缓、儿童神经内科',                    1),
   (14, 'CARDIOLOGY_I','心脏介入科',   '内科', '门诊三楼',   '010-82009013', '门诊楼三层 302 室',  3,  140, '冠脉造影、冠脉支架、结构性心脏病介入',                       1),
   (15, 'ORTHO_SPINE', '脊柱外科',     '外科', '门诊一楼东', '010-82007891', '门诊楼一层 116 室', 10,  150, '颈椎病、腰椎间盘突出、脊柱畸形、脊柱骨折',                   1),
-  (16, 'TCM_ACU',     '针灸推拿科',   '全科', '门诊四楼西', '010-82009013', '门诊楼四层 416 室', 12,  160, '针灸、推拿、小针刀、中医外治',                                1)
+  (16, 'TCM_ACU',     '针灸推拿科',   '全科', '门诊四楼西', '010-82009013', '门诊楼四层 416 室', 12,  160, '针灸、推拿、小针刀、中医外治',                                1) AS new
 ON DUPLICATE KEY UPDATE
-  dept_code   = VALUES(dept_code),
-  dept_name   = VALUES(dept_name),
-  dept_type   = VALUES(dept_type),
-  floor       = VALUES(floor),
-  phone       = VALUES(phone),
-  location    = VALUES(location),
-  parent_id   = VALUES(parent_id),
-  sort_order  = VALUES(sort_order),
-  description = VALUES(description),
-  status      = VALUES(status);
+  dept_code   = new.dept_code,
+  dept_name   = new.dept_name,
+  dept_type   = new.dept_type,
+  floor       = new.floor,
+  phone       = new.phone,
+  location    = new.location,
+  parent_id   = new.parent_id,
+  sort_order  = new.sort_order,
+  description = new.description,
+  status      = new.status;
 
 -- ------------------------------------------------------------
 -- 4. 医生（60 人，跨 16 个科室、4 种职称、2 种医生类型）
@@ -238,16 +238,16 @@ VALUES
   -- 额外 3 位（保证 user_id 58-61 也被使用）
   (58, 58, 3,  'D20260057', '门诊医生', '主治医师',   '高血压随访门诊',               '心血管内科主治医师，高血压专病门诊',                           1),
   (59, 59, 4,  'D20260058', '门诊医生', '主治医师',   '哮喘专病门诊',                 '呼吸内科主治医师，哮喘专病门诊',                               1),
-  (60, 60, 7,  'D20260059', '住院医生', '住院医师',   '儿科住院医师',                 '儿科住院医师，轮科培养',                                       1)
+  (60, 60, 7,  'D20260059', '住院医生', '住院医师',   '儿科住院医师',                 '儿科住院医师，轮科培养',                                       1) AS new
 ON DUPLICATE KEY UPDATE
-  user_id       = VALUES(user_id),
-  dept_id       = VALUES(dept_id),
-  doctor_no     = VALUES(doctor_no),
-  doctor_type   = VALUES(doctor_type),
-  title         = VALUES(title),
-  specialty     = VALUES(specialty),
-  introduction  = VALUES(introduction),
-  status        = VALUES(status);
+  user_id       = new.user_id,
+  dept_id       = new.dept_id,
+  doctor_no     = new.doctor_no,
+  doctor_type   = new.doctor_type,
+  title         = new.title,
+  specialty     = new.specialty,
+  introduction  = new.introduction,
+  status        = new.status;
 
 -- ------------------------------------------------------------
 -- 5. 患者（80 人，跨不同年龄段、性别、地区，含完整字段）
@@ -334,15 +334,15 @@ VALUES
   (1077, NULL, 'P20260077', '刘晓明', '男', '2005-05-17', '13900000077', '110101200505170077', '刘父', '13900001077', '北京市西城区复兴门外大街 17 号', '无', '无', 1),
   (1078, NULL, 'P20260078', '陈丽娟', '女', '1988-06-18', '13900000078', '110101198806180078', '陈夫', '13900001078', '北京市海淀区中关村南大街 18 号', '无', '无', 1),
   (1079, NULL, 'P20260079', '杨建华', '男', '1965-07-19', '13900000079', '110101196507190079', '杨妻', '13900001079', '北京市海淀区复兴路 19 号', '无', '高血压、糖尿病', 1),
-  (1080, NULL, 'P20260080', '黄建国', '男', '1972-08-20', '13900000080', '110101197208200080', '黄妻', '13900001080', '北京市海淀区学院路 20 号', '青霉素过敏', '高血压', 1)
+  (1080, NULL, 'P20260080', '黄建国', '男', '1972-08-20', '13900000080', '110101197208200080', '黄妻', '13900001080', '北京市海淀区学院路 20 号', '青霉素过敏', '高血压', 1) AS new
 ON DUPLICATE KEY UPDATE
-  patient_name = VALUES(patient_name),
-  gender       = VALUES(gender),
-  birthday     = VALUES(birthday),
-  phone        = VALUES(phone),
-  id_card      = VALUES(id_card),
-  address      = VALUES(address),
-  status       = VALUES(status);
+  patient_name = new.patient_name,
+  gender       = new.gender,
+  birthday     = new.birthday,
+  phone        = new.phone,
+  id_card      = new.id_card,
+  address      = new.address,
+  status       = new.status;
 
 -- ------------------------------------------------------------
 -- 6. 排班（64条：Day 0 Day 1 Day 2 Day 3 Day 4 Day 5 Day 6）
@@ -356,39 +356,39 @@ VALUES
   -- Day 0 16
   (2001, 1,  1, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 30, 24, 20.00, 'AVAILABLE',  'MANUAL'),
   (2002, 1,  1, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2003, 2,  1, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 25, 18, 18.00, 'AVAILABLE',  'MANUAL'),
-  (2004, 3,  1, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 20, 15, 15.00, 'AVAILABLE',  'MANUAL'),
-  (2005, 4,  2, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 40, 33, 12.00, 'AVAILABLE',  'MANUAL'),
-  (2006, 4,  2, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 35,  0, 12.00, 'FULL',       'MANUAL'),
-  (2007, 5,  2, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 35, 30, 14.00, 'AVAILABLE',  'MANUAL'),
+  (2003, 2,  1, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 25, 24, 18.00, 'AVAILABLE',  'MANUAL'),
+  (2004, 3,  1, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 20, 20, 15.00, 'AVAILABLE',  'MANUAL'),
+  (2005, 4,  2, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 40, 40, 12.00, 'AVAILABLE',  'MANUAL'),
+  (2006, 4,  2, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 35, 34, 12.00, 'AVAILABLE',  'MANUAL'),
+  (2007, 5,  2, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 35, 35, 14.00, 'AVAILABLE',  'MANUAL'),
   (2008, 6,  2, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 40, 40, 14.00, 'AVAILABLE',  'MANUAL'),
-  (2009, 7,  3, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 28, 20, 22.00, 'AVAILABLE',  'MANUAL'),
+  (2009, 7,  3, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 28, 25, 22.00, 'AVAILABLE',  'MANUAL'),
   (2010, 7,  3, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 28, 28, 22.00, 'AVAILABLE',  'AI_SUGGESTED'),
-  (2011, 8,  3, CURDATE(),                            'EVENING',   '18:00:00', '21:00:00', 20, 15, 18.00, 'AVAILABLE',  'MANUAL'),
-  (2012, 9,  3, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 25, 22, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2013, 11, 4, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 30, 26, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2014, 12, 4, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 25, 20, 18.00, 'AVAILABLE',  'MANUAL'),
-  (2015, 14, 5, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 28, 25, 20.00, 'AVAILABLE',  'MANUAL'),
+  (2011, 8,  3, CURDATE(),                            'EVENING',   '18:00:00', '21:00:00', 20, 20, 18.00, 'AVAILABLE',  'MANUAL'),
+  (2012, 9,  3, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 25, 25, 20.00, 'AVAILABLE',  'MANUAL'),
+  (2013, 11, 4, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 30, 28, 20.00, 'AVAILABLE',  'MANUAL'),
+  (2014, 12, 4, CURDATE(),                            'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
+  (2015, 14, 5, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 28, 28, 20.00, 'AVAILABLE',  'MANUAL'),
   (2016, 16, 6, CURDATE(),                            'MORNING',   '08:00:00', '12:00:00', 30, 28, 20.00, 'AVAILABLE',  'AI_SUGGESTED'),
   -- Day 1 10
-  (2101, 1,  1, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 28, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2102, 2,  1, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 10, 18.00, 'AVAILABLE',  'MANUAL'),
-  (2103, 5,  2, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 35, 30, 14.00, 'AVAILABLE',  'MANUAL'),
-  (2104, 7,  3, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 28, 28, 22.00, 'AVAILABLE',  'AI_SUGGESTED'),
+  (2101, 1,  1, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 29, 20.00, 'AVAILABLE',  'MANUAL'),
+  (2102, 2,  1, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
+  (2103, 5,  2, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 35, 34, 14.00, 'AVAILABLE',  'MANUAL'),
+  (2104, 7,  3, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 28, 27, 22.00, 'AVAILABLE',  'AI_SUGGESTED'),
   (2105, 11, 4, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
   (2106, 14, 5, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 28, 28, 20.00, 'AVAILABLE',  'MANUAL'),
   (2107, 16, 6, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2108, 18, 7, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 40, 35, 15.00, 'AVAILABLE',  'MANUAL'),
-  (2109, 20, 8, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 28, 20.00, 'AVAILABLE',  'MANUAL'),
+  (2108, 18, 7, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 40, 39, 15.00, 'AVAILABLE',  'MANUAL'),
+  (2109, 20, 8, DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 29, 20.00, 'AVAILABLE',  'MANUAL'),
   (2110, 24, 10,DATE_ADD(CURDATE(), INTERVAL 1 DAY),  'MORNING',   '08:00:00', '12:00:00', 28, 28, 22.00, 'AVAILABLE',  'MANUAL'),
   -- Day 2 10
   (2201, 1,  1, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
   (2202, 2,  1, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 18.00, 'AI_SUGGESTED','AI_SUGGESTED'),
-  (2203, 5,  2, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 30, 25, 14.00, 'AVAILABLE',  'MANUAL'),
+  (2203, 5,  2, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 30, 30, 14.00, 'AVAILABLE',  'MANUAL'),
   (2204, 9,  3, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 25, 20.00, 'AVAILABLE',  'AI_SUGGESTED'),
   (2205, 11, 4, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
   (2206, 17, 6, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
-  (2207, 24, 10,DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 28, 28, 22.00, 'AVAILABLE',  'MANUAL'),
+  (2207, 24, 10,DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 28, 27, 22.00, 'AVAILABLE',  'MANUAL'),
   (2208, 26, 11,DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 30, 30, 18.00, 'AVAILABLE',  'MANUAL'),
   (2209, 27, 12,DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 25, 20.00, 'AVAILABLE',  'MANUAL'),
   (2210, 20, 8, DATE_ADD(CURDATE(), INTERVAL 2 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
@@ -406,10 +406,10 @@ VALUES
   (2402, 5,  2, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'MORNING',   '08:00:00', '12:00:00', 35, 35, 14.00, 'AVAILABLE',  'MANUAL'),
   (2403, 11, 4, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
   (2404, 16, 6, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 30, 30, 20.00, 'AVAILABLE',  'MANUAL'),
-  (2405, 22, 9, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
+  (2405, 22, 9, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'MORNING',   '08:00:00', '12:00:00', 25, 24, 18.00, 'AVAILABLE',  'MANUAL'),
   (2406, 27, 12,DATE_ADD(CURDATE(), INTERVAL 4 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 20.00, 'AVAILABLE',  'MANUAL'),
   -- Day 5 6 + 1 FULL
-  (2501, 3,  1, DATE_ADD(CURDATE(), INTERVAL 5 DAY),  'MORNING',   '08:00:00', '12:00:00', 20,  0, 15.00, 'FULL',       'MANUAL'),
+  (2501, 3,  1, DATE_ADD(CURDATE(), INTERVAL 5 DAY),  'MORNING',   '08:00:00', '12:00:00', 20, 20, 15.00, 'AVAILABLE',  'MANUAL'),
   (2502, 8,  3, DATE_ADD(CURDATE(), INTERVAL 5 DAY),  'EVENING',   '18:00:00', '21:00:00', 20, 20, 18.00, 'AVAILABLE',  'MANUAL'),
   (2503, 6,  2, DATE_ADD(CURDATE(), INTERVAL 5 DAY),  'MORNING',   '08:00:00', '12:00:00', 40, 40, 14.00, 'AVAILABLE',  'MANUAL'),
   (2504, 11, 4, DATE_ADD(CURDATE(), INTERVAL 5 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 25, 25, 18.00, 'AVAILABLE',  'MANUAL'),
@@ -419,19 +419,19 @@ VALUES
   (2601, 6,  2, DATE_ADD(CURDATE(), INTERVAL 6 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 14.00, 'AVAILABLE',  'MANUAL'),
   (2602, 10, 3, DATE_ADD(CURDATE(), INTERVAL 6 DAY),  'AFTERNOON', '14:00:00', '18:00:00', 20, 20, 16.00, 'AVAILABLE',  'MANUAL'),
   (2603, 18, 7, DATE_ADD(CURDATE(), INTERVAL 6 DAY),  'MORNING',   '08:00:00', '12:00:00', 40, 40, 15.00, 'AVAILABLE',  'MANUAL'),
-  (2604, 26, 11,DATE_ADD(CURDATE(), INTERVAL 6 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 30, 18.00, 'AVAILABLE',  'MANUAL')
+  (2604, 26, 11,DATE_ADD(CURDATE(), INTERVAL 6 DAY),  'MORNING',   '08:00:00', '12:00:00', 30, 29, 18.00, 'AVAILABLE',  'MANUAL') AS new
 ON DUPLICATE KEY UPDATE
-  doctor_id        = VALUES(doctor_id),
-  dept_id          = VALUES(dept_id),
-  work_date        = VALUES(work_date),
-  time_period      = VALUES(time_period),
-  start_time       = VALUES(start_time),
-  end_time         = VALUES(end_time),
-  total_quota      = VALUES(total_quota),
-  remain_quota     = VALUES(remain_quota),
-  registration_fee = VALUES(registration_fee),
-  status           = VALUES(status),
-  source           = VALUES(source);
+  doctor_id        = new.doctor_id,
+  dept_id          = new.dept_id,
+  work_date        = new.work_date,
+  time_period      = new.time_period,
+  start_time       = new.start_time,
+  end_time         = new.end_time,
+  total_quota      = new.total_quota,
+  remain_quota     = new.remain_quota,
+  registration_fee = new.registration_fee,
+  status           = new.status,
+  source           = new.source;
 
 -- ------------------------------------------------------------
 -- 7. AI 问诊（12 条，覆盖各科室主诉）
@@ -452,17 +452,17 @@ VALUES
   (3009, 1031, '视力模糊,看远处不清楚', '持续约 2 个月,无眼红痛', '建议眼科就诊', 8, 'LOW',    '{"department":"眼科","risk":"LOW"}',        'COMPLETED', NOW()),
   (3010, 1036, '咽喉不适,声音嘶哑', '症状持续一周,伴轻微咽痛', '建议耳鼻喉科就诊', 9, 'LOW', '{"department":"耳鼻喉科","risk":"LOW"}',  'COMPLETED', NOW()),
   (3011, 1044, '皮肤红斑,瘙痒明显', '四肢及躯干多发', '建议皮肤科就诊', 11, 'LOW', '{"department":"皮肤科","risk":"LOW"}',  'COMPLETED', NOW()),
-  (3012, 1052, '长期失眠,多梦易醒', '伴焦虑情绪', '建议中医科或全科门诊就诊', 12, 'MEDIUM', '{"department":"中医科","risk":"MEDIUM"}', 'COMPLETED', NOW())
+  (3012, 1052, '长期失眠,多梦易醒', '伴焦虑情绪', '建议中医科或全科门诊就诊', 12, 'MEDIUM', '{"department":"中医科","risk":"MEDIUM"}', 'COMPLETED', NOW()) AS new
 ON DUPLICATE KEY UPDATE
-  patient_id          = VALUES(patient_id),
-  chief_complaint     = VALUES(chief_complaint),
-  symptom_detail      = VALUES(symptom_detail),
-  ai_summary          = VALUES(ai_summary),
-  recommended_dept_id = VALUES(recommended_dept_id),
-  risk_level          = VALUES(risk_level),
-  ai_result           = VALUES(ai_result),
-  status              = VALUES(status),
-  created_at          = VALUES(created_at);
+  patient_id          = new.patient_id,
+  chief_complaint     = new.chief_complaint,
+  symptom_detail      = new.symptom_detail,
+  ai_summary          = new.ai_summary,
+  recommended_dept_id = new.recommended_dept_id,
+  risk_level          = new.risk_level,
+  ai_result           = new.ai_result,
+  status              = new.status,
+  created_at          = new.created_at;
 
 -- ------------------------------------------------------------
 -- 8. 挂号记录（24 条，分布到不同排班与患者）
@@ -497,20 +497,20 @@ VALUES
   (4021, 1031, 3009, 8, 20, 2109, 1, 'AI_TRIAGE', 'R20260021', 1, 20.00, 'PAID',   'REGISTERED', NOW()),
   (4022, 1036, 3010, 9, 22, 2405, 1, 'AI_TRIAGE', 'R20260022', 1, 18.00, 'PAID',   'REGISTERED', NOW()),
   (4023, 1044, 3011, 11, 26, 2604, 1, 'AI_TRIAGE', 'R20260023', 1, 18.00, 'PAID',   'REGISTERED', NOW()),
-  (4024, 1052, 3012, 12, 27, 2209, 1, 'AI_TRIAGE', 'R20260024', 1, 20.00, 'PAID',   'REGISTERED', NOW())
+  (4024, 1052, 3012, 12, 27, 2209, 1, 'AI_TRIAGE', 'R20260024', 1, 20.00, 'PAID',   'REGISTERED', NOW()) AS new
 ON DUPLICATE KEY UPDATE
-  patient_id        = VALUES(patient_id),
-  consultation_id   = VALUES(consultation_id),
-  dept_id           = VALUES(dept_id),
-  doctor_id         = VALUES(doctor_id),
-  schedule_id       = VALUES(schedule_id),
-  operator_user_id  = VALUES(operator_user_id),
-  source            = VALUES(source),
-  queue_no          = VALUES(queue_no),
-  registration_fee  = VALUES(registration_fee),
-  fee_status        = VALUES(fee_status),
-  status            = VALUES(status),
-  registered_at     = VALUES(registered_at);
+  patient_id        = new.patient_id,
+  consultation_id   = new.consultation_id,
+  dept_id           = new.dept_id,
+  doctor_id         = new.doctor_id,
+  schedule_id       = new.schedule_id,
+  operator_user_id  = new.operator_user_id,
+  source            = new.source,
+  queue_no          = new.queue_no,
+  registration_fee  = new.registration_fee,
+  fee_status        = new.fee_status,
+  status            = new.status,
+  registered_at     = new.registered_at;
 
 -- ------------------------------------------------------------
 -- 9. 分诊记录（10 条，与 AI 问诊和挂号对应）
@@ -529,18 +529,18 @@ VALUES
   (5007, 1028, 3008, 4020, NULL, 10, '颈肩腰腿痛',           'LOW',    '建议骨科理疗或中医推拿',      'COMPLETED', NOW()),
   (5008, 1031, 3009, 4021, NULL, 8,  '视力模糊',             'LOW',    '建议眼科检查视力',            'COMPLETED', NOW()),
   (5009, 1036, 3010, 4022, NULL, 9,  '咽喉不适',             'LOW',    '建议耳鼻喉科门诊',            'AI_SUGGESTED', NOW()),
-  (5010, 1052, 3012, 4024, NULL, 12, '长期失眠',             'MEDIUM', '建议中医科调理或心理门诊',    'COMPLETED', NOW())
+  (5010, 1052, 3012, 4024, NULL, 12, '长期失眠',             'MEDIUM', '建议中医科调理或心理门诊',    'COMPLETED', NOW()) AS new
 ON DUPLICATE KEY UPDATE
-  patient_id          = VALUES(patient_id),
-  consultation_id     = VALUES(consultation_id),
-  registration_id     = VALUES(registration_id),
-  triage_doctor_id    = VALUES(triage_doctor_id),
-  recommended_dept_id = VALUES(recommended_dept_id),
-  chief_complaint     = VALUES(chief_complaint),
-  risk_level          = VALUES(risk_level),
-  triage_result       = VALUES(triage_result),
-  status              = VALUES(status),
-  created_at          = VALUES(created_at);
+  patient_id          = new.patient_id,
+  consultation_id     = new.consultation_id,
+  registration_id     = new.registration_id,
+  triage_doctor_id    = new.triage_doctor_id,
+  recommended_dept_id = new.recommended_dept_id,
+  chief_complaint     = new.chief_complaint,
+  risk_level          = new.risk_level,
+  triage_result       = new.triage_result,
+  status              = new.status,
+  created_at          = new.created_at;
 
 -- ------------------------------------------------------------
 -- 10. AI 排班建议（5 条建议 + 详情）
@@ -554,15 +554,15 @@ VALUES
   (6002, 7,  3, DATE_ADD(CURDATE(), INTERVAL 8 DAY), 'AFTERNOON', 28, '心血管内科周四下午常现排队高峰,建议增加主任医师排班',    'PENDING', NOW()),
   (6003, 11, 4, DATE_ADD(CURDATE(), INTERVAL 9 DAY), 'MORNING',   30, '呼吸内科周一上午就诊人次稳定高位,建议增加排班',          'APPROVED', NOW()),
   (6004, 18, 7, DATE_ADD(CURDATE(), INTERVAL 10 DAY), 'MORNING',  40, '儿科周末就诊需求明显高于工作日,建议增加儿科主任医师排班', 'PENDING', NOW()),
-  (6005, 24, 10, DATE_ADD(CURDATE(), INTERVAL 11 DAY), 'AFTERNOON',28,'骨科颈肩腰腿痛患者下午就诊较多,建议增加排班',            'REJECTED', NOW())
+  (6005, 24, 10, DATE_ADD(CURDATE(), INTERVAL 11 DAY), 'AFTERNOON',28,'骨科颈肩腰腿痛患者下午就诊较多,建议增加排班',            'REJECTED', NOW()) AS new
 ON DUPLICATE KEY UPDATE
-  doctor_id        = VALUES(doctor_id),
-  dept_id          = VALUES(dept_id),
-  work_date        = VALUES(work_date),
-  time_period      = VALUES(time_period),
-  suggested_quota  = VALUES(suggested_quota),
-  suggestion_reason= VALUES(suggestion_reason),
-  status           = VALUES(status);
+  doctor_id        = new.doctor_id,
+  dept_id          = new.dept_id,
+  work_date        = new.work_date,
+  time_period      = new.time_period,
+  suggested_quota  = new.suggested_quota,
+  suggestion_reason= new.suggestion_reason,
+  status           = new.status;
 
 INSERT INTO ai_schedule_suggestion_detail (
   detail_id, suggestion_id, doctor_id, doctor_name, schedule_date,
@@ -574,12 +574,12 @@ VALUES
   (3, 6002, 7, '赵强', DATE_ADD(CURDATE(), INTERVAL 8 DAY), 'AFTERNOON', 28, '赵强医生为心血管内科主任医师,介入治疗专家',             'PENDING'),
   (4, 6003, 11, '刘洋', DATE_ADD(CURDATE(), INTERVAL 9 DAY), 'MORNING',  30, '刘洋医生为呼吸内科主任医师,慢阻肺和哮喘专家',           'ACCEPTED'),
   (5, 6004, 18, '高阳', DATE_ADD(CURDATE(), INTERVAL 10 DAY), 'MORNING', 40, '高阳医生为儿科主任医师,儿童常见病及生长发育评估',      'PENDING'),
-  (6, 6005, 24, '周勇', DATE_ADD(CURDATE(), INTERVAL 11 DAY), 'AFTERNOON',28,'周勇医生为骨科主任医师,脊柱关节疾病专家',             'REJECTED')
+  (6, 6005, 24, '周勇', DATE_ADD(CURDATE(), INTERVAL 11 DAY), 'AFTERNOON',28,'周勇医生为骨科主任医师,脊柱关节疾病专家',             'REJECTED') AS new
 ON DUPLICATE KEY UPDATE
-  doctor_id        = VALUES(doctor_id),
-  doctor_name      = VALUES(doctor_name),
-  schedule_date    = VALUES(schedule_date),
-  time_slot        = VALUES(time_slot),
-  max_appointments = VALUES(max_appointments),
-  reason           = VALUES(reason),
-  status           = VALUES(status);
+  doctor_id        = new.doctor_id,
+  doctor_name      = new.doctor_name,
+  schedule_date    = new.schedule_date,
+  time_slot        = new.time_slot,
+  max_appointments = new.max_appointments,
+  reason           = new.reason,
+  status           = new.status;

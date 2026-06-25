@@ -132,7 +132,6 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 		r.setDoctorId(d.getDoctorId());
 		r.setDoctorNo(d.getDoctorNo());
 		r.setDoctorName(user != null ? user.getRealName() : "");
-		r.setGender(d.getGender());
 		r.setPhone(user != null ? user.getPhone() : null);
 		r.setEmail(user != null ? user.getEmail() : null);
 		r.setDepartmentId(d.getDeptId());
@@ -149,7 +148,3 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 		return r;
 	}
 }
-
-
-
-

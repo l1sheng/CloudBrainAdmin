@@ -41,7 +41,6 @@
       <el-table :data="tableData" stripe border style="width: 100%" empty-text="暂无医生数据" v-loading="loading">
         <el-table-column prop="doctorNo" label="工号" width="110" />
         <el-table-column prop="doctorName" label="姓名" width="100" />
-        <el-table-column prop="gender" label="性别" width="70" />
         <el-table-column label="科室" width="140">
           <template #default="{ row }">
             <el-tag size="small" effect="plain">{{ row.departmentName }}</el-tag>
@@ -91,15 +90,6 @@
           <el-col :span="12">
             <el-form-item label="工号" prop="doctorNo">
               <el-input v-model="formData.doctorNo" placeholder="请输入工号" maxlength="50" :readonly="dialogMode === 'edit'" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="性别">
-              <el-radio-group v-model="formData.gender">
-                <el-radio value="男">男</el-radio>
-                <el-radio value="女">女</el-radio>
-                <el-radio value="其他">其他</el-radio>
-              </el-radio-group>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -159,7 +149,6 @@
       <el-descriptions :column="2" border v-if="currentDetail">
         <el-descriptions-item label="姓名">{{ currentDetail.doctorName }}</el-descriptions-item>
         <el-descriptions-item label="工号">{{ currentDetail.doctorNo }}</el-descriptions-item>
-        <el-descriptions-item label="性别">{{ currentDetail.gender || '-' }}</el-descriptions-item>
         <el-descriptions-item label="科室">{{ currentDetail.departmentName }}</el-descriptions-item>
         <el-descriptions-item label="职称">{{ currentDetail.title || '-' }}</el-descriptions-item>
         <el-descriptions-item label="医生类型">{{ currentDetail.doctorType || '-' }}</el-descriptions-item>
@@ -196,7 +185,7 @@ const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const formRef = ref(null)
 const formData = reactive({
-  doctorId: undefined, name: '', doctorNo: '', gender: '男', phone: '', email: '',
+  doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
   departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: ''
 })
 
@@ -247,7 +236,7 @@ function onReset() {
 
 function resetFormData() {
   Object.assign(formData, {
-    doctorId: undefined, name: '', doctorNo: '', gender: '男', phone: '', email: '',
+    doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
     departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: ''
   })
 }
@@ -259,7 +248,7 @@ function openEditDialog(row) {
   resetFormData()
   Object.assign(formData, {
     doctorId: row.doctorId, name: row.doctorName || '', doctorNo: row.doctorNo || '',
-    gender: row.gender || '男', phone: row.phone || '', email: row.email || '',
+    phone: row.phone || '', email: row.email || '',
     departmentId: row.departmentId, title: row.title || '', doctorType: row.doctorType || '主治',
     specialty: row.specialty || '', hireDate: row.hireDate || ''
   })
@@ -273,7 +262,7 @@ async function submitForm() {
   submitting.value = true
   try {
     const payload = {
-      name: formData.name?.trim(), doctorNo: formData.doctorNo?.trim(), gender: formData.gender,
+      name: formData.name?.trim(), doctorNo: formData.doctorNo?.trim(),
       phone: formData.phone?.trim() || null, email: formData.email?.trim() || null,
       departmentId: formData.departmentId, title: formData.title,
       doctorType: formData.doctorType || '主治', specialty: formData.specialty?.trim() || null,
@@ -331,8 +320,8 @@ async function exportList() {
     const list = await exportDoctors(queryForm.departmentId)
     if (!list || list.length === 0) { ElMessage.warning('当前筛选条件下没有可导出的数据'); return }
 
-    const headers = ['工号', '姓名', '性别', '科室', '职称', '医生类型', '专长', '手机', '邮箱', '入职日期', '状态']
-    const rows = list.map(d => [d.doctorNo, d.doctorName, d.gender || '', d.departmentName, d.title || '', d.doctorType || '', d.specialty || '', d.phone || '', d.email || '', d.hireDate || '', d.status === 1 ? '启用' : '停用'])
+    const headers = ['工号', '姓名', '科室', '职称', '医生类型', '专长', '手机', '邮箱', '入职日期', '状态']
+    const rows = list.map(d => [d.doctorNo, d.doctorName, d.departmentName, d.title || '', d.doctorType || '', d.specialty || '', d.phone || '', d.email || '', d.hireDate || '', d.status === 1 ? '启用' : '停用'])
     const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)

@@ -34,6 +34,14 @@ export function getScheduleDetail(id) {
   })
 }
 
+// 某排班下的挂号记录
+export function listScheduleRegistrations(id) {
+  return request({
+    url: '/admin/schedules/' + id + '/registrations',
+    method: 'get'
+  })
+}
+
 // 创建排班
 export function createSchedule(data) {
   return request({
