@@ -1,14 +1,15 @@
 package com.neuCloudBrainMedical.admin.service;
 
-import com.neuCloudBrainMedical.admin.dto.LoginRequest;
-import com.neuCloudBrainMedical.admin.dto.LoginResponse;
+import com.neuCloudBrainMedical.admin.dto.auth.LoginRequest;
+import com.neuCloudBrainMedical.admin.dto.auth.LoginResponse;
 import com.neuCloudBrainMedical.admin.entity.SysRole;
 import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.SysRoleRepository;
 import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.security.JwtTokenProvider;
-import com.neuCloudBrainMedical.admin.service.impl.AuthServiceImpl;
+import com.neuCloudBrainMedical.admin.service.auth.AuthService;
+import com.neuCloudBrainMedical.admin.service.auth.impl.AuthServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;

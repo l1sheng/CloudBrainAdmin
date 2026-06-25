@@ -1,10 +1,11 @@
 package com.neuCloudBrainMedical.admin.service;
 
-import com.neuCloudBrainMedical.admin.dto.DepartmentDTO;
-import com.neuCloudBrainMedical.admin.entity.Department;
+import com.neuCloudBrainMedical.admin.dto.department.DepartmentDTO;
+import com.neuCloudBrainMedical.admin.entity.department.Department;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
-import com.neuCloudBrainMedical.admin.repository.DepartmentRepository;
-import com.neuCloudBrainMedical.admin.service.impl.DepartmentServiceImpl;
+import com.neuCloudBrainMedical.admin.repository.department.DepartmentRepository;
+import com.neuCloudBrainMedical.admin.service.department.DepartmentService;
+import com.neuCloudBrainMedical.admin.service.department.impl.DepartmentServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

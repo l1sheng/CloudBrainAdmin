@@ -29,6 +29,12 @@ const routes = [
         name: 'Department',
         component: () => import('@/views/admin/Department.vue'),
         meta: { title: '科室管理', requiresAuth: true }
+      },
+      {
+        path: 'doctor',
+        name: 'Doctor',
+        component: () => import('@/views/admin/Doctor.vue'),
+        meta: { title: '医生管理', requiresAuth: true }
       }
     ]
   }

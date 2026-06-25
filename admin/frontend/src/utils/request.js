@@ -23,7 +23,7 @@ function clearAuth() {
 
 const request = axios.create({
   baseURL: '/api',
-  timeout: 15000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json'
   }

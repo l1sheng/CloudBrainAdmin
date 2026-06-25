@@ -25,6 +25,10 @@
           <el-icon><OfficeBuilding /></el-icon>
           <template #title>科室管理</template>
         </el-menu-item>
+        <el-menu-item index="/doctor">
+          <el-icon><UserFilled /></el-icon>
+          <template #title>医生管理</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -88,7 +92,8 @@ import {
   Expand,
   ArrowDown,
   SwitchButton,
-  OfficeBuilding
+  OfficeBuilding,
+  UserFilled
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
