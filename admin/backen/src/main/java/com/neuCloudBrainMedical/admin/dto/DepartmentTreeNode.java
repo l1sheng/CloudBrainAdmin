@@ -2,10 +2,11 @@ package com.neuCloudBrainMedical.admin.dto;
 
 import java.util.List;
 
-/** 科室树形节点（极简：仅 id / name / children，用于 el-tree）。 */
+/** 科室树形节点（用于 el-tree，包含 id / code / name / children）。 */
 public class DepartmentTreeNode {
 
 	private Long id;
+	private String code;
 	private String name;
 	private List<DepartmentTreeNode> children;
 
@@ -16,12 +17,26 @@ public class DepartmentTreeNode {
 		this.name = name;
 	}
 
+	public DepartmentTreeNode(Long id, String code, String name) {
+		this.id = id;
+		this.code = code;
+		this.name = name;
+	}
+
 	public Long getId() {
 		return id;
 	}
 
 	public void setId(Long id) {
 		this.id = id;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
 	}
 
 	public String getName() {

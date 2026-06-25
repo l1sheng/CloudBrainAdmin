@@ -61,12 +61,12 @@ public class DepartmentMapper {
 		return roots;
 	}
 
-	/** 极简树（只包含 id / name / children），供 el-tree 使用。 */
+	/** 科室树（包含 id / code / name / children），供 el-tree 使用。 */
 	public List<DepartmentTreeNode> toTreeNodes(List<Department> departments) {
 		if (departments == null || departments.isEmpty()) return Collections.emptyList();
 		Map<Long, DepartmentTreeNode> map = new HashMap<>();
 		for (Department d : departments) {
-			map.put(d.getDeptId(), new DepartmentTreeNode(d.getDeptId(), d.getDeptName()));
+			map.put(d.getDeptId(), new DepartmentTreeNode(d.getDeptId(), d.getDeptCode(), d.getDeptName()));
 		}
 		List<DepartmentTreeNode> roots = new ArrayList<>();
 		for (Department d : departments) {

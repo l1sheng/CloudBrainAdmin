@@ -23,14 +23,37 @@
             v-model="queryForm.departmentId"
             placeholder="请选择科室"
             clearable
-            style="width: 140px"
+            style="width: 180px"
           >
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
+            <!-- 多类型时分组展示；单类型时扁平化 -->
+            <template v-if="hasMultipleDeptTypes">
+              <el-option-group
+                v-for="group in departmentsByType"
+                :key="group.type"
+                :label="group.type"
+              >
+                <el-option
+                  v-for="dept in group.items"
+                  :key="dept.id"
+                  :label="formatDeptLabel(dept)"
+                  :value="dept.id"
+                >
+                  <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                  <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                </el-option>
+              </el-option-group>
+            </template>
+            <template v-else>
+              <el-option
+                v-for="dept in departments"
+                :key="dept.id"
+                :label="formatDeptLabel(dept)"
+                :value="dept.id"
+              >
+                <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+              </el-option>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item label="职称">
@@ -214,12 +237,34 @@
             @change="onDepartmentChange"
             :disabled="isEdit"
           >
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
+            <template v-if="hasMultipleDeptTypes">
+              <el-option-group
+                v-for="group in departmentsByType"
+                :key="group.type"
+                :label="group.type"
+              >
+                <el-option
+                  v-for="dept in group.items"
+                  :key="dept.id"
+                  :label="formatDeptLabel(dept)"
+                  :value="dept.id"
+                >
+                  <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                  <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                </el-option>
+              </el-option-group>
+            </template>
+            <template v-else>
+              <el-option
+                v-for="dept in departments"
+                :key="dept.id"
+                :label="formatDeptLabel(dept)"
+                :value="dept.id"
+              >
+                <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+              </el-option>
+            </template>
           </el-select>
         </el-form-item>
 
@@ -370,12 +415,34 @@
             style="width: 100%"
             @change="onAIDepartmentChange"
           >
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
+            <template v-if="hasMultipleDeptTypes">
+              <el-option-group
+                v-for="group in departmentsByType"
+                :key="group.type"
+                :label="group.type"
+              >
+                <el-option
+                  v-for="dept in group.items"
+                  :key="dept.id"
+                  :label="formatDeptLabel(dept)"
+                  :value="dept.id"
+                >
+                  <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                  <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                </el-option>
+              </el-option-group>
+            </template>
+            <template v-else>
+              <el-option
+                v-for="dept in departments"
+                :key="dept.id"
+                :label="formatDeptLabel(dept)"
+                :value="dept.id"
+              >
+                <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+              </el-option>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围" required>
@@ -739,6 +806,52 @@ const formatDoctorLabel = (doc) => {
   parts.push(doc.title || '')
   return parts.join(' ').trim()
 }
+
+// -------- 科室下拉展示工具 --------
+
+// 主标签：[code] 科室名称
+const formatDeptLabel = (dept) => {
+  if (!dept) return ''
+  const parts = []
+  if (dept.code) parts.push('[' + dept.code + ']')
+  parts.push(dept.name || '')
+  return parts.join(' ').trim()
+}
+
+// 副信息：楼层 / 类型
+const formatDeptSubLabel = (dept) => {
+  if (!dept) return ''
+  const parts = []
+  if (dept.departmentType) parts.push(dept.departmentType)
+  if (dept.floor) parts.push(dept.floor)
+  return parts.join(' · ')
+}
+
+// 将科室按 departmentType 分组（扁平 list → { type: [dept1, dept2] }）
+const departmentsByType = computed(() => {
+  const list = departments.value || []
+  if (!list.length) return []
+
+  // 先按 departmentType 分组
+  const groups = new Map()
+  for (const d of list) {
+    const type = d.departmentType || '其他'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(d)
+  }
+
+  // 转为数组（类型名按字典序，便于展示时稳定）
+  const types = Array.from(groups.keys()).sort()
+  return types.map((type) => ({
+    type,
+    items: groups.get(type)
+  }))
+})
+
+// 是否有多个科室类型（决定是否用分组展示）
+const hasMultipleDeptTypes = computed(() => {
+  return departmentsByType.value.length > 1
+})
 
 function slotClass(row, dateStr, slot) {
   const item = getScheduleItem(row, dateStr, slot)
@@ -1214,6 +1327,42 @@ async function onRejectDetail(row) {
 </script>
 
 <style scoped>
+/* 科室下拉选项的样式 */
+.dept-option-main {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.4;
+}
+.dept-option-sub {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.dept-option-sub:empty {
+  display: none;
+}
+
+/* 关键修复：让 el-option 高度随内容自适应（原本固定 34px，双行会被截断产生"黑点"） */
+:deep(.el-select-dropdown__item) {
+  height: auto;
+  min-height: 34px;
+  line-height: 1.4;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: none;
+}
+:deep(.el-select-dropdown__item.hover),
+:deep(.el-select-dropdown__item:hover) {
+  background-color: #f5f7fa;
+}
+
+/* option-group 的分组标签也要加一点垂直间距，避免和上方内容挤在一起 */
+:deep(.el-select-dropdown__group) {
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
+
 .schedule-page {
   height: 100%;
   display: flex;

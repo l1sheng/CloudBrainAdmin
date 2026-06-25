@@ -8,6 +8,7 @@ public class DepartmentCreateRequest {
 	@NotBlank(message = "科室名称不能为空")
 	private String name;
 
+	private String code;
 	private String description;
 	private String floor;
 	private String phone;
@@ -21,6 +22,14 @@ public class DepartmentCreateRequest {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
 	}
 
 	public String getDescription() {

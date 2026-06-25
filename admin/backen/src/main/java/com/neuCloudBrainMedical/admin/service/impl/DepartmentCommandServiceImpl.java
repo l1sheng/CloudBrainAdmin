@@ -50,7 +50,8 @@ public class DepartmentCommandServiceImpl implements IDepartmentCommandService {
 
 		Department department = new Department();
 		department.setDeptName(request.getName().trim());
-		department.setDeptCode(generateDeptCode());
+		// 优先使用用户提供的 code；若未提供则自动生成
+		department.setDeptCode(normalizeCode(request.getCode()));
 		department.setDeptType(normalizeType(request.getDepartmentType()));
 		department.setParentId(request.getParentId());
 		department.setDescription(request.getDescription());
@@ -80,6 +81,7 @@ public class DepartmentCommandServiceImpl implements IDepartmentCommandService {
 			if (trimmed.isEmpty()) throw new BusinessException(400, "科室名称不能为空");
 			existing.setDeptName(trimmed);
 		}
+		if (request.getCode() != null) existing.setDeptCode(normalizeCode(request.getCode()));
 		if (request.getDescription() != null) existing.setDescription(request.getDescription());
 		if (request.getFloor() != null) existing.setFloor(request.getFloor());
 		if (request.getPhone() != null) existing.setPhone(request.getPhone());
@@ -139,8 +141,11 @@ public class DepartmentCommandServiceImpl implements IDepartmentCommandService {
 		return type.trim();
 	}
 
-	private static String generateDeptCode() {
-		// 短 code，作为唯一标识的回退方案；前端也可以在编辑时修改
+	private static String normalizeCode(String code) {
+		if (code != null && !code.isBlank()) {
+			return code.trim();
+		}
+		// 用户未提供 code 时自动生成
 		return "D" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
 	}
 }
