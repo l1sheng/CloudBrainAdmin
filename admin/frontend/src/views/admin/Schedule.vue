@@ -23,12 +23,14 @@
             v-model="queryForm.departmentId"
             placeholder="请选择科室"
             clearable
+            filterable
+            :filter-method="filterDepartment"
             style="width: 180px"
           >
             <!-- 多类型时分组展示；单类型时扁平化 -->
             <template v-if="hasMultipleDeptTypes">
               <el-option-group
-                v-for="group in departmentsByType"
+                v-for="group in filteredDepartmentsByType"
                 :key="group.type"
                 :label="group.type"
               >
@@ -45,7 +47,7 @@
             </template>
             <template v-else>
               <el-option
-                v-for="dept in departments"
+                v-for="dept in filteredDepartments"
                 :key="dept.id"
                 :label="formatDeptLabel(dept)"
                 :value="dept.id"
@@ -233,13 +235,15 @@
           <el-select
             v-model="formData.departmentId"
             placeholder="请选择科室"
+            filterable
+            :filter-method="filterDepartment"
             style="width: 100%"
             @change="onDepartmentChange"
             :disabled="isEdit"
           >
             <template v-if="hasMultipleDeptTypes">
               <el-option-group
-                v-for="group in departmentsByType"
+                v-for="group in filteredDepartmentsByType"
                 :key="group.type"
                 :label="group.type"
               >
@@ -256,7 +260,7 @@
             </template>
             <template v-else>
               <el-option
-                v-for="dept in departments"
+                v-for="dept in filteredDepartments"
                 :key="dept.id"
                 :label="formatDeptLabel(dept)"
                 :value="dept.id"
@@ -412,12 +416,14 @@
           <el-select
             v-model="aiForm.departmentId"
             placeholder="请选择科室"
+            filterable
+            :filter-method="filterDepartment"
             style="width: 100%"
             @change="onAIDepartmentChange"
           >
             <template v-if="hasMultipleDeptTypes">
               <el-option-group
-                v-for="group in departmentsByType"
+                v-for="group in filteredDepartmentsByType"
                 :key="group.type"
                 :label="group.type"
               >
@@ -434,7 +440,7 @@
             </template>
             <template v-else>
               <el-option
-                v-for="dept in departments"
+                v-for="dept in filteredDepartments"
                 :key="dept.id"
                 :label="formatDeptLabel(dept)"
                 :value="dept.id"
@@ -557,6 +563,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const deleting = ref(false)
 const departments = ref([])
+const deptKeyword = ref('')
 const doctors = ref([])
 const rawList = ref([])
 const titleOptions = ref([]) // 职称选项：从后端医生数据动态提取
@@ -852,6 +859,48 @@ const departmentsByType = computed(() => {
 const hasMultipleDeptTypes = computed(() => {
   return departmentsByType.value.length > 1
 })
+
+// 科室模糊搜索：匹配 code、name、departmentType、floor
+const matchesDeptKeyword = (dept) => {
+  const kw = (deptKeyword.value || '').trim().toLowerCase()
+  if (!kw) return true
+  const haystack = [
+    dept.name || '',
+    dept.code || '',
+    dept.departmentType || '',
+    dept.floor || ''
+  ]
+    .join(' ')
+    .toLowerCase()
+  return haystack.includes(kw)
+}
+
+// 过滤后的科室列表（扁平化）
+const filteredDepartments = computed(() => {
+  return (departments.value || []).filter(matchesDeptKeyword)
+})
+
+// 过滤后的科室分组
+const filteredDepartmentsByType = computed(() => {
+  const list = filteredDepartments.value
+  if (!list.length) return []
+  const groups = new Map()
+  for (const d of list) {
+    const type = d.departmentType || '其他'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(d)
+  }
+  const types = Array.from(groups.keys()).sort()
+  return types.map((type) => ({
+    type,
+    items: groups.get(type)
+  }))
+})
+
+// el-select 过滤回调：更新关键字（返回值决定是否隐藏选项）
+const filterDepartment = (keyword) => {
+  deptKeyword.value = keyword || ''
+}
 
 function slotClass(row, dateStr, slot) {
   const item = getScheduleItem(row, dateStr, slot)
