@@ -7,10 +7,12 @@ import com.neuCloudBrainMedical.admin.dto.ScheduleUpdateRequest;
 import com.neuCloudBrainMedical.admin.entity.Department;
 import com.neuCloudBrainMedical.admin.entity.Doctor;
 import com.neuCloudBrainMedical.admin.entity.DoctorSchedule;
+import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.ScheduleRepository;
+import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.IScheduleCommandService;
 import com.neuCloudBrainMedical.admin.util.ScheduleTimeSlotUtils;
 import org.springframework.stereotype.Service;
@@ -34,15 +36,18 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 	private final ScheduleRepository scheduleRepository;
 	private final DoctorRepository doctorRepository;
 	private final DepartmentRepository departmentRepository;
+	private final SysUserRepository sysUserRepository;
 	private final ScheduleMapper scheduleMapper;
 
 	public ScheduleCommandServiceImpl(ScheduleRepository scheduleRepository,
 			DoctorRepository doctorRepository,
 			DepartmentRepository departmentRepository,
+			SysUserRepository sysUserRepository,
 			ScheduleMapper scheduleMapper) {
 		this.scheduleRepository = scheduleRepository;
 		this.doctorRepository = doctorRepository;
 		this.departmentRepository = departmentRepository;
+		this.sysUserRepository = sysUserRepository;
 		this.scheduleMapper = scheduleMapper;
 	}
 
@@ -189,8 +194,10 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 	private ScheduleResponse toResponse(DoctorSchedule schedule) {
 		Doctor doctor = doctorRepository.findById(schedule.getDoctorId()).orElse(null);
 		Department department = departmentRepository.findById(schedule.getDeptId()).orElse(null);
+		SysUser user = doctor != null ? sysUserRepository.findById(doctor.getUserId()).orElse(null) : null;
 		return scheduleMapper.toResponse(schedule,
 				doctor == null ? Map.of() : Map.of(doctor.getDoctorId(), doctor),
-				department == null ? Map.of() : Map.of(department.getDeptId(), department));
+				department == null ? Map.of() : Map.of(department.getDeptId(), department),
+				user == null ? Map.of() : Map.of(user.getUserId(), user));
 	}
 }

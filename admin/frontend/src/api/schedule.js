@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 部门列表
 export function listDepartments() {
   return request({
-    url: '/admin/departments',
+    url: '/admin/department',
     method: 'get'
   })
 }

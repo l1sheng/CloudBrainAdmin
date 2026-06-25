@@ -4,6 +4,7 @@ import com.neuCloudBrainMedical.admin.dto.ScheduleResponse;
 import com.neuCloudBrainMedical.admin.entity.Department;
 import com.neuCloudBrainMedical.admin.entity.Doctor;
 import com.neuCloudBrainMedical.admin.entity.DoctorSchedule;
+import com.neuCloudBrainMedical.admin.entity.SysUser;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -13,8 +14,9 @@ public class ScheduleMapper {
 
 	public ScheduleResponse toResponse(DoctorSchedule schedule,
 	                                    Map<Long, Doctor> doctors,
-	                                    Map<Long, Department> departments) {
-		return toResponse(schedule, doctors, departments, null);
+	                                    Map<Long, Department> departments,
+	                                    Map<Long, SysUser> users) {
+		return toResponse(schedule, doctors, departments, users, null);
 	}
 
 	/**
@@ -23,14 +25,25 @@ public class ScheduleMapper {
 	 * @param schedule           排班实体
 	 * @param doctors            医生 id -> 医生实体 的映射
 	 * @param departments        科室 id -> 科室实体 的映射
+	 * @param users              user_id -> 用户实体 的映射（用来取医生姓名 real_name）
 	 * @param registrationCounts 排班 id -> 真实挂号数 的映射（可为 null）
 	 */
 	public ScheduleResponse toResponse(DoctorSchedule schedule,
 	                                    Map<Long, Doctor> doctors,
 	                                    Map<Long, Department> departments,
+	                                    Map<Long, SysUser> users,
 	                                    Map<Long, Integer> registrationCounts) {
 		Doctor doctor = doctors.get(schedule.getDoctorId());
 		Department department = departments.get(schedule.getDeptId());
+
+		// 医生姓名统一从关联的 sys_user.real_name 取，避免 doctor.doctor_name 冗余字段
+		String doctorName = "";
+		if (doctor != null && users != null) {
+			SysUser user = users.get(doctor.getUserId());
+			if (user != null) {
+				doctorName = user.getRealName();
+			}
+		}
 
 		// 优先使用从 registration 表统计的真实挂号数，
 		// 若没有统计数据，则回退为 total_quota - remain_quota
@@ -44,7 +57,7 @@ public class ScheduleMapper {
 		ScheduleResponse response = new ScheduleResponse();
 		response.setId(schedule.getScheduleId());
 		response.setDoctorId(schedule.getDoctorId());
-		response.setDoctorName(doctor != null ? doctor.getDoctorName() : "");
+		response.setDoctorName(doctorName);
 		response.setDoctorNo(doctor != null ? doctor.getDoctorNo() : "");
 		response.setDoctorType(doctor != null ? doctor.getDoctorType() : "");
 		response.setTitle(doctor != null ? doctor.getTitle() : "");

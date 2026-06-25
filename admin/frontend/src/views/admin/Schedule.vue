@@ -27,9 +27,9 @@
           >
             <el-option
               v-for="dept in departments"
-              :key="dept.deptId"
-              :label="dept.deptName"
-              :value="dept.deptId"
+              :key="dept.id"
+              :label="dept.name"
+              :value="dept.id"
             />
           </el-select>
         </el-form-item>
@@ -40,9 +40,12 @@
             clearable
             style="width: 130px"
           >
-            <el-option label="主任医师" value="主任" />
-            <el-option label="副主任医师" value="副主任" />
-            <el-option label="主治医师" value="主治" />
+            <el-option
+              v-for="t in titleOptions"
+              :key="t"
+              :label="t"
+              :value="t"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="医生类型">
@@ -52,8 +55,12 @@
             clearable
             style="width: 120px"
           >
-            <el-option label="门诊医生" value="门诊" />
-            <el-option label="病房医生" value="病房" />
+            <el-option
+              v-for="t in doctorTypeOptions"
+              :key="t"
+              :label="t"
+              :value="t"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="周次">
@@ -209,9 +216,9 @@
           >
             <el-option
               v-for="dept in departments"
-              :key="dept.deptId"
-              :label="dept.deptName"
-              :value="dept.deptId"
+              :key="dept.id"
+              :label="dept.name"
+              :value="dept.id"
             />
           </el-select>
         </el-form-item>
@@ -365,9 +372,9 @@
           >
             <el-option
               v-for="dept in departments"
-              :key="dept.deptId"
-              :label="dept.deptName"
-              :value="dept.deptId"
+              :key="dept.id"
+              :label="dept.name"
+              :value="dept.id"
             />
           </el-select>
         </el-form-item>
@@ -485,6 +492,8 @@ const deleting = ref(false)
 const departments = ref([])
 const doctors = ref([])
 const rawList = ref([])
+const titleOptions = ref([]) // 职称选项：从后端医生数据动态提取
+const doctorTypeOptions = ref([]) // 医生类型选项：从后端医生数据动态提取
 
 const queryForm = reactive({
   departmentId: null,
@@ -625,15 +634,13 @@ const matrixRows = computed(() => {
   const rowsMap = new Map()
   const schedulesByDoctor = new Map()
 
-  // 前端筛选：按职称、医生类型
+  // 前端筛选：按职称、医生类型（与后端 doctor 表精确匹配）
   let filtered = rawList.value
   if (queryForm.title) {
-    const keyword = queryForm.title
-    filtered = filtered.filter((item) => item.title && item.title.includes(keyword))
+    filtered = filtered.filter((item) => item.title === queryForm.title)
   }
   if (queryForm.doctorType) {
-    const keyword = queryForm.doctorType
-    filtered = filtered.filter((item) => item.doctorType && item.doctorType.includes(keyword))
+    filtered = filtered.filter((item) => item.doctorType === queryForm.doctorType)
   }
 
   for (const item of filtered) {
@@ -874,6 +881,18 @@ async function loadDepartments() {
   } catch (e) {}
 }
 
+function extractOptions(list) {
+  // 从医生列表提取去重的 title 和 doctorType，作为筛选下拉选项
+  const titleSet = new Set()
+  const typeSet = new Set()
+  for (const d of list || []) {
+    if (d.title) titleSet.add(d.title)
+    if (d.doctorType) typeSet.add(d.doctorType)
+  }
+  titleOptions.value = Array.from(titleSet)
+  doctorTypeOptions.value = Array.from(typeSet)
+}
+
 async function loadDoctors(departmentId) {
   if (!departmentId) {
     doctors.value = []
@@ -884,6 +903,14 @@ async function loadDoctors(departmentId) {
   } catch (e) {
     doctors.value = []
   }
+}
+
+// 加载所有医生（用于初始化时提取完整的职称/类型选项）
+async function loadAllDoctorsForOptions() {
+  try {
+    const list = await listDoctors(null)
+    extractOptions(list)
+  } catch (e) {}
 }
 
 async function loadList() {
@@ -1074,8 +1101,9 @@ watch(
   }
 )
 
-onMounted(() => {
+onMounted(async () => {
   loadDepartments()
+  await loadAllDoctorsForOptions() // 先加载所有医生以提取职称/类型选项
   loadList()
 })
 

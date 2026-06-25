@@ -12,6 +12,7 @@ import com.neuCloudBrainMedical.admin.entity.AiScheduleSuggestionDetail;
 import com.neuCloudBrainMedical.admin.entity.Department;
 import com.neuCloudBrainMedical.admin.entity.Doctor;
 import com.neuCloudBrainMedical.admin.entity.DoctorSchedule;
+import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.AIServiceException;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.AiScheduleSuggestionDetailRepository;
@@ -19,6 +20,7 @@ import com.neuCloudBrainMedical.admin.repository.AiScheduleSuggestionRepository;
 import com.neuCloudBrainMedical.admin.repository.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.ScheduleRepository;
+import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.IAIScheduleService;
 import com.neuCloudBrainMedical.admin.service.IAISchedulingClient;
 import com.neuCloudBrainMedical.admin.util.ScheduleTimeSlotUtils;
@@ -30,6 +32,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class AIScheduleServiceImpl implements IAIScheduleService {
@@ -43,6 +48,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 
 	private final IAISchedulingClient aiSchedulingClient;
 	private final DoctorRepository doctorRepository;
+	private final SysUserRepository sysUserRepository;
 	private final DepartmentRepository departmentRepository;
 	private final ScheduleRepository scheduleRepository;
 	private final AiScheduleSuggestionRepository suggestionRepository;
@@ -52,6 +58,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 
 	public AIScheduleServiceImpl(IAISchedulingClient aiSchedulingClient,
 			DoctorRepository doctorRepository,
+			SysUserRepository sysUserRepository,
 			DepartmentRepository departmentRepository,
 			ScheduleRepository scheduleRepository,
 			AiScheduleSuggestionRepository suggestionRepository,
@@ -60,6 +67,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 			ObjectMapper objectMapper) {
 		this.aiSchedulingClient = aiSchedulingClient;
 		this.doctorRepository = doctorRepository;
+		this.sysUserRepository = sysUserRepository;
 		this.departmentRepository = departmentRepository;
 		this.scheduleRepository = scheduleRepository;
 		this.suggestionRepository = suggestionRepository;
@@ -73,7 +81,23 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	public AIScheduleSuggestionResponse generateSuggestion(AIScheduleSuggestRequest request) {
 		List<Doctor> doctors = doctorRepository.findByDeptIdAndStatusOrderByDoctorIdAsc(
 				request.getDepartmentId(), ENABLED_DOCTOR_STATUS);
-		List<DoctorInfo> doctorInfos = doctors.stream().map(this::toDoctorInfo).toList();
+
+		// 通过 user_id 关联 sys_user.real_name 作为医生姓名（去掉 doctor 表冗余字段 doctor_name）
+		Map<Long, SysUser> usersByUserId = Map.of();
+		if (!doctors.isEmpty()) {
+			Set<Long> userIds = doctors.stream()
+					.map(Doctor::getUserId)
+					.collect(Collectors.toSet());
+			usersByUserId = sysUserRepository.findAllById(userIds)
+					.stream()
+					.collect(Collectors.toMap(SysUser::getUserId, Function.identity()));
+		}
+
+		Map<Long, SysUser> usersFinal = usersByUserId;
+		List<DoctorInfo> doctorInfos = doctors.stream()
+				.map(doctor -> toDoctorInfo(doctor, usersFinal.get(doctor.getUserId())))
+				.toList();
+
 		String rawJson = aiSchedulingClient.requestSchedulingSuggestion(
 				request.getDepartmentId(),
 				request.getStartDate(),
@@ -150,10 +174,11 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 		return suggestionRepository.save(suggestion);
 	}
 
-	private DoctorInfo toDoctorInfo(Doctor doctor) {
+	private DoctorInfo toDoctorInfo(Doctor doctor, SysUser user) {
 		DoctorInfo info = new DoctorInfo();
 		info.setDoctorId(doctor.getDoctorId());
-		info.setDoctorName(doctor.getDoctorNo());
+		// 医生姓名从关联用户 real_name 取；若 user 缺失，回退为空字符串
+		info.setDoctorName(user != null ? user.getRealName() : "");
 		info.setTitle(doctor.getTitle());
 		info.setSpecialty(doctor.getSpecialty());
 		info.setHistoricalWorkDays(0L);
@@ -227,9 +252,12 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	private ScheduleResponse toScheduleResponse(DoctorSchedule schedule) {
 		Doctor doctor = doctorRepository.findById(schedule.getDoctorId()).orElse(null);
 		Department department = departmentRepository.findById(schedule.getDeptId()).orElse(null);
+		// 医生姓名从 sys_user.real_name 取，避免 doctor 表冗余字段
+		SysUser user = doctor != null ? sysUserRepository.findById(doctor.getUserId()).orElse(null) : null;
 		return scheduleMapper.toResponse(schedule,
 				doctor == null ? Map.of() : Map.of(doctor.getDoctorId(), doctor),
-				department == null ? Map.of() : Map.of(department.getDeptId(), department));
+				department == null ? Map.of() : Map.of(department.getDeptId(), department),
+				user == null ? Map.of() : Map.of(user.getUserId(), user));
 	}
 
 	private List<AiScheduleSuggestionDetail> parseDetails(String rawJson, Long suggestionId) {

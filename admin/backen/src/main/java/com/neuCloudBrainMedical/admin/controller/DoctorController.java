@@ -21,7 +21,8 @@ public class DoctorController {
 	}
 
 	@GetMapping
-	public Result<List<DoctorOptionDTO>> listEnabledDoctors(@RequestParam("departmentId") Long departmentId) {
+	public Result<List<DoctorOptionDTO>> listEnabledDoctors(
+			@RequestParam(required = false) Long departmentId) {
 		return Result.success(doctorQueryService.listEnabledDoctors(departmentId));
 	}
 }

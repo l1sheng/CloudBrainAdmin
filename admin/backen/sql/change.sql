@@ -62,18 +62,34 @@ END $$
 DELIMITER ;
 
 -- ------------------------------------------------------------
--- 改动 1：doctor 表增加 doctor_name 字段
--- 原因：原 doctor 表只有 doctor_no 无医生姓名字段，ScheduleResponse 需要
---       展示医生姓名。虽然 sys_user 表有 real_name 可通过 user_id 关联，
---       但增加冗余字段可避免每次查询都做三表关联，提升查询性能。
+-- 改动 1：doctor 表移除冗余的 doctor_name 字段
+-- 原因：doctor 表通过 user_id 关联 sys_user，医生姓名应当由 sys_user.real_name
+--       提供，冗余字段会导致数据不一致（新增/修改医生时双写容易漏），且违反范式。
+--       原有数据（doctor_name）已无业务用途，可安全丢弃；新建表直接不包含此字段。
 -- ------------------------------------------------------------
-CALL add_column_if_not_exists('doctor', 'doctor_name', 'doctor_name VARCHAR(50) AFTER doctor_no');
+DROP PROCEDURE IF EXISTS drop_column_if_exists;
+DELIMITER $$
+CREATE PROCEDURE drop_column_if_exists(
+    IN p_table_name VARCHAR(64),
+    IN p_column_name VARCHAR(64)
+)
+BEGIN
+    DECLARE col_exists INT;
+    SELECT COUNT(*) INTO col_exists
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = p_table_name
+      AND COLUMN_NAME = p_column_name;
+    IF col_exists = 1 THEN
+        SET @sql = CONCAT('ALTER TABLE ', p_table_name, ' DROP COLUMN ', p_column_name);
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END $$
+DELIMITER ;
 
--- 从 sys_user.real_name 同步已有数据
-UPDATE doctor d
-  INNER JOIN sys_user u ON d.user_id = u.user_id
-  SET d.doctor_name = u.real_name
-  WHERE d.doctor_name IS NULL;
+CALL drop_column_if_exists('doctor', 'doctor_name');
 
 -- ------------------------------------------------------------
 -- 改动 2：doctor_schedule.status 从中文值迁移为英文枚举值

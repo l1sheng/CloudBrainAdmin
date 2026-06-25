@@ -28,9 +28,6 @@ public class Doctor {
 	@Column(name = "doctor_no", nullable = false, unique = true, length = 50)
 	private String doctorNo;
 
-	@Column(name = "doctor_name", length = 50)
-	private String doctorName;
-
 	@Column(name = "doctor_type", nullable = false, length = 50)
 	private String doctorType;
 
@@ -88,14 +85,6 @@ public class Doctor {
 
 	public void setDoctorNo(String doctorNo) {
 		this.doctorNo = doctorNo;
-	}
-
-	public String getDoctorName() {
-		return doctorName;
-	}
-
-	public void setDoctorName(String doctorName) {
-		this.doctorName = doctorName;
 	}
 
 	public String getDoctorType() {

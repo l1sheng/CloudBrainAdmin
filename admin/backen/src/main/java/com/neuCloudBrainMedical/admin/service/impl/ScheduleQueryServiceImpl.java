@@ -4,11 +4,13 @@ import com.neuCloudBrainMedical.admin.dto.ScheduleResponse;
 import com.neuCloudBrainMedical.admin.entity.Department;
 import com.neuCloudBrainMedical.admin.entity.Doctor;
 import com.neuCloudBrainMedical.admin.entity.DoctorSchedule;
+import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.RegistrationRepository;
 import com.neuCloudBrainMedical.admin.repository.ScheduleRepository;
+import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.IScheduleQueryService;
 import org.springframework.stereotype.Service;
 
@@ -26,17 +28,20 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 	private final ScheduleRepository scheduleRepository;
 	private final DoctorRepository doctorRepository;
 	private final DepartmentRepository departmentRepository;
+	private final SysUserRepository sysUserRepository;
 	private final RegistrationRepository registrationRepository;
 	private final ScheduleMapper scheduleMapper;
 
 	public ScheduleQueryServiceImpl(ScheduleRepository scheduleRepository,
 			DoctorRepository doctorRepository,
 			DepartmentRepository departmentRepository,
+			SysUserRepository sysUserRepository,
 			RegistrationRepository registrationRepository,
 			ScheduleMapper scheduleMapper) {
 		this.scheduleRepository = scheduleRepository;
 		this.doctorRepository = doctorRepository;
 		this.departmentRepository = departmentRepository;
+		this.sysUserRepository = sysUserRepository;
 		this.registrationRepository = registrationRepository;
 		this.scheduleMapper = scheduleMapper;
 	}
@@ -64,9 +69,9 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 				.collect(Collectors.toSet());
 
 		// 1) 查询关联医生
-		Map<Long, Doctor> doctors = doctorRepository.findAllById(
-						schedules.stream().map(DoctorSchedule::getDoctorId).collect(Collectors.toSet()))
-				.stream()
+		List<Doctor> doctors = doctorRepository.findAllById(
+				schedules.stream().map(DoctorSchedule::getDoctorId).collect(Collectors.toSet()));
+		Map<Long, Doctor> doctorsById = doctors.stream()
 				.collect(Collectors.toMap(Doctor::getDoctorId, Function.identity()));
 
 		// 2) 查询关联科室
@@ -75,7 +80,15 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 				.stream()
 				.collect(Collectors.toMap(Department::getDeptId, Function.identity()));
 
-		// 3) 查询每个排班的真实挂号数（从 registration 表统计）
+		// 3) 通过医生 user_id 查询 sys_user，拿到 real_name 作为医生姓名（避免冗余字段）
+		Set<Long> userIds = doctors.stream()
+				.map(Doctor::getUserId)
+				.collect(Collectors.toSet());
+		Map<Long, SysUser> usersByUserId = sysUserRepository.findAllById(userIds)
+				.stream()
+				.collect(Collectors.toMap(SysUser::getUserId, Function.identity()));
+
+		// 4) 查询每个排班的真实挂号数（从 registration 表统计）
 		Map<Long, Integer> registrationCounts = new HashMap<>();
 		List<Object[]> counts = registrationRepository.countByScheduleIdIn(scheduleIds);
 		if (counts != null) {
@@ -87,7 +100,7 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 		}
 
 		return schedules.stream()
-				.map(schedule -> scheduleMapper.toResponse(schedule, doctors, departments, registrationCounts))
+				.map(schedule -> scheduleMapper.toResponse(schedule, doctorsById, departments, usersByUserId, registrationCounts))
 				.collect(Collectors.toList());
 	}
 }
