@@ -1,0 +1,65 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { title: '登录', requiresAuth: false }
+  },
+  {
+    path: '/',
+    component: () => import('@/views/Layout.vue'),
+    redirect: '/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/Dashboard.vue'),
+        meta: { title: '首页', requiresAuth: true }
+      },
+      {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/admin/Schedule.vue'),
+        meta: { title: '排班管理', requiresAuth: true }
+      },
+      {
+        path: 'department',
+        name: 'Department',
+        component: () => import('@/views/admin/Department.vue'),
+        meta: { title: '科室管理', requiresAuth: true }
+      }
+    ]
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+function hasToken() {
+  try {
+    return !!localStorage.getItem('admin_token')
+  } catch {
+    return false
+  }
+}
+
+router.beforeEach((to, from, next) => {
+  const title = to.meta?.title
+  document.title = (title ? title + ' - ' : '') + '医生排班管理系统'
+
+  if (to.meta?.requiresAuth && !hasToken()) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+    return
+  }
+  if (to.name === 'Login' && hasToken()) {
+    next({ path: '/' })
+    return
+  }
+  next()
+})
+
+export default router
