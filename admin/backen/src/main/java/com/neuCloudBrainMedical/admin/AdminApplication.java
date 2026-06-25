@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class AdminApplication {
-
+//测试0021
 	public static void main(String[] args) {
 		SpringApplication.run(AdminApplication.class, args);
 	}
