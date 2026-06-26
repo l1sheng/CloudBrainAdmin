@@ -2,8 +2,8 @@
   <el-container class="app-layout">
     <el-aside :width="sidebarCollapsed ? '64px' : '220px'" class="app-aside">
       <div class="logo">
-        <span class="logo-icon">🩺</span>
-        <span v-if="!sidebarCollapsed" class="logo-text">排班管理系统</span>
+        <span class="logo-icon">🏥</span>
+        <span v-if="!sidebarCollapsed" class="logo-text">医院综合管理平台</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -15,11 +15,7 @@
       >
         <el-menu-item index="/dashboard">
           <el-icon><HomeFilled /></el-icon>
-          <template #title>首页</template>
-        </el-menu-item>
-        <el-menu-item index="/schedule">
-          <el-icon><Calendar /></el-icon>
-          <template #title>排班管理</template>
+          <template #title>工作台</template>
         </el-menu-item>
         <el-menu-item index="/department">
           <el-icon><OfficeBuilding /></el-icon>
@@ -28,6 +24,10 @@
         <el-menu-item index="/doctor">
           <el-icon><UserFilled /></el-icon>
           <template #title>医生管理</template>
+        </el-menu-item>
+        <el-menu-item index="/schedule">
+          <el-icon><Calendar /></el-icon>
+          <template #title>排班管理</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -40,8 +40,8 @@
             <Expand v-else />
           </el-icon>
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentTitle && currentTitle !== '首页'">
+            <el-breadcrumb-item :to="{ path: '/' }">工作台</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="currentTitle && currentTitle !== '工作台'">
               {{ currentTitle }}
             </el-breadcrumb-item>
           </el-breadcrumb>

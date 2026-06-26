@@ -9,7 +9,7 @@
             <el-button type="primary" :icon="Plus" @click="openCreateDialog">
               新增科室
             </el-button>
-            <el-button :icon="Refresh" @click="refreshAll">刷新</el-button>
+            <el-button type="success" :icon="Refresh" @click="refreshAll">刷新</el-button>
           </div>
         </div>
       </template>
@@ -18,251 +18,261 @@
       <div class="main-layout">
         <!-- 左栏：科室目录 -->
         <div class="sidebar">
-          <div class="sidebar-head">
-            <span class="sidebar-title">科室目录</span>
-            <el-tag size="small" type="info" effect="plain">{{ totalTreeCount }} 个</el-tag>
-          </div>
+          <div class="sidebar-inner">
+            <div class="sidebar-head">
+              <span class="sidebar-title">科室目录</span>
+              <el-tag size="small" type="info" effect="plain">{{ totalTreeCount }} 个</el-tag>
+            </div>
 
-          <el-input
-            v-model="treeKeyword"
-            placeholder="搜索科室"
-            clearable
-            :prefix-icon="Search"
-            size="small"
-            class="tree-search"
-          />
+            <el-input
+              v-model="treeKeyword"
+              placeholder="搜索科室"
+              clearable
+              :prefix-icon="Search"
+              size="small"
+              class="tree-search"
+            />
 
-          <el-tree
-            ref="treeRef"
-            class="dept-tree"
-            :data="filteredTreeData"
-            node-key="id"
-            :default-expand-all="true"
-            :highlight-current="true"
-            :expand-on-click-node="true"
-            :show-icon="false"
-            @node-click="handleTreeNodeClick"
-          >
+            <div class="tree-scroll">
+            <el-tree
+              ref="treeRef"
+              class="dept-tree"
+              :data="filteredTreeData"
+              node-key="id"
+              :default-expand-all="true"
+              :highlight-current="true"
+              :expand-on-click-node="false"
+              :show-icon="false"
+              @node-click="handleTreeNodeClick"
+            >
             <template #default="{ data, node }">
               <div class="dept-tree-node" :class="{ active: selectedId === data.id }">
                 <div class="dept-tree-main">
                   <span
-                    class="dept-tree-icon"
-                    :class="{
-                      'icon-root': node.level === 1 && (data.children || []).length > 0,
-                      'icon-leaf': node.level === 1 && !(data.children || []).length,
-                      'icon-sub': node.level > 1
-                    }"
+                    v-if="(data.children || []).length > 0"
+                    class="dept-tree-icon dept-tree-icon-toggle"
+                    @click.stop="toggleNodeExpand(node)"
                   >
-                    <el-icon v-if="(data.children || []).length > 0 && node.expanded"><CaretBottom /></el-icon>
-                    <el-icon v-else-if="(data.children || []).length > 0"><CaretRight /></el-icon>
-                    <el-icon v-else><Document /></el-icon>
+                    <el-icon v-if="node.expanded"><CaretBottom /></el-icon>
+                    <el-icon v-else><CaretRight /></el-icon>
+                  </span>
+                  <span v-else class="dept-tree-icon">
+                    <el-icon><Document /></el-icon>
                   </span>
                   <span class="dept-tree-name">{{ data.name }}</span>
                   <span v-if="data.code" class="dept-tree-code">{{ data.code }}</span>
                 </div>
               </div>
             </template>
-          </el-tree>
+            </el-tree>
+            </div>
+          </div>
         </div>
 
         <!-- 右栏：列表/详情 -->
         <div class="content-area">
           <!-- 列表视图 -->
-          <div v-if="!selectedId || !currentDetail" class="list-toolbar">
-            <div class="list-toolbar-left">
-              <el-input
-                v-model="keyword"
-                placeholder="搜索科室名称或编号"
-                clearable
-                :prefix-icon="Search"
-                style="width: 260px"
-                @input="loadList"
-              />
-            </div>
-            <div class="list-toolbar-right">
-              <el-dropdown @command="handleTypeFilter">
-                <el-button>
-                  类型筛选
-                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="">全部</el-dropdown-item>
-                    <el-dropdown-item
-                      v-for="t in departmentTypeOptions"
-                      :key="t"
-                      :command="t"
-                    >
-                      {{ t }}
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </div>
-
-          <!-- 列表表格 -->
-          <el-table
-            v-if="!selectedId || !currentDetail"
-            :data="filteredTableData"
-            stripe
-            style="width: 100%"
-            empty-text="暂无科室数据"
-            :header-cell-style="{ background: '#fafafa' }"
-          >
-            <el-table-column label="科室" min-width="240">
-              <template #default="{ row }">
-                <div class="table-dept-cell">
-                  <div class="table-dept-icon" :class="row.departmentType === '住院' ? 'icon-purple' : 'icon-blue'">
-                    <el-icon><OfficeBuilding /></el-icon>
-                  </div>
-                  <div>
-                    <div class="table-dept-name">{{ row.name }}</div>
-                    <div class="table-dept-code">{{ row.code || '未分配编号' }}</div>
-                  </div>
+          <transition name="fade-slide" mode="out-in">
+            <div v-if="!selectedId || !currentDetail" key="list" class="right-pane">
+              <div class="list-toolbar">
+                <div class="list-toolbar-left">
+                  <el-input
+                    v-model="keyword"
+                    placeholder="搜索科室名称或编号"
+                    clearable
+                    :prefix-icon="Search"
+                    style="width: 260px"
+                    @input="loadList"
+                  />
                 </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="类型" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag
-                  size="small"
-                  :type="row.departmentType === '住院' ? 'warning' : 'primary'"
-                  effect="plain"
-                >
-                  {{ row.departmentType || '-' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="上级科室" width="120" show-overflow-tooltip>
-              <template #default="{ row }">
-                <span class="table-parent">{{ parentName(row.parentId) || '顶级科室' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="楼层" width="120" align="center">
-              <template #default="{ row }">
-                <span>{{ row.floor || '-' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="联系电话" width="130" show-overflow-tooltip>
-              <template #default="{ row }">
-                <span>{{ row.phone || '-' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="排序" width="70" align="center">
-              <template #default="{ row }">
-                <span class="table-sort-num">{{ row.sortOrder }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="70" align="center">
-              <template #default="{ row }">
-                <el-tag
-                  size="small"
-                  :type="row.status === 1 ? 'success' : 'info'"
-                  effect="light"
-                >
-                  {{ row.status === 1 ? '启用' : '停用' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="110" fixed="right" align="center">
-              <template #default="{ row }">
-                <el-tooltip content="查看" placement="top">
-                  <el-button type="primary" link :icon="View" @click="viewDetail(row)" />
-                </el-tooltip>
-                <el-tooltip content="编辑" placement="top">
-                  <el-button type="primary" link :icon="Edit" @click="openEditDialog(row)" />
-                </el-tooltip>
-                <el-tooltip content="删除" placement="top">
-                  <el-button type="danger" link :icon="Delete" @click="handleDelete(row)" />
-                </el-tooltip>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <!-- 详情视图 -->
-          <div v-if="selectedId && currentDetail" class="detail-wrapper">
-            <div class="detail-header">
-              <div class="detail-head-left">
-                <div class="detail-avatar">
-                  <el-icon><OfficeBuilding /></el-icon>
+                <div class="list-toolbar-right">
+                  <el-dropdown @command="handleTypeFilter">
+                    <el-button>
+                      类型筛选
+                      <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="">全部</el-dropdown-item>
+                        <el-dropdown-item
+                          v-for="t in departmentTypeOptions"
+                          :key="t"
+                          :command="t"
+                        >
+                          {{ t }}
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
                 </div>
-                <div>
-                  <div class="detail-name">{{ currentDetail.name }}</div>
-                  <div class="detail-meta">
-                    <el-tag size="small" type="info" effect="plain">
-                      {{ currentDetail.code || '未分配编号' }}
-                    </el-tag>
+              </div>
+
+              <div class="table-scroll">
+              <el-table
+                :data="filteredTableData"
+                stripe
+                style="width: 100%"
+                height="100%"
+                empty-text="暂无科室数据"
+                :header-cell-style="{ background: '#fafafa' }"
+              >
+                <el-table-column label="科室" min-width="240">
+                  <template #default="{ row }">
+                    <div class="table-dept-cell">
+                      <div class="table-dept-icon" :class="row.departmentType === '住院' ? 'icon-purple' : 'icon-blue'">
+                        <el-icon><OfficeBuilding /></el-icon>
+                      </div>
+                      <div>
+                        <div class="table-dept-name">{{ row.name }}</div>
+                        <div class="table-dept-code">{{ row.code || '未分配编号' }}</div>
+                      </div>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="类型" width="80" align="center">
+                  <template #default="{ row }">
                     <el-tag
                       size="small"
-                      :type="currentDetail.status === 1 ? 'success' : 'info'"
+                      :type="row.departmentType === '住院' ? 'warning' : 'primary'"
+                      effect="plain"
+                    >
+                      {{ row.departmentType || '-' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="上级科室" width="120" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span class="table-parent">{{ parentName(row.parentId) || '顶级科室' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="楼层" width="120" align="center">
+                  <template #default="{ row }">
+                    <span>{{ row.floor || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="联系电话" width="130" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span>{{ row.phone || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="排序" width="70" align="center">
+                  <template #default="{ row }">
+                    <span class="table-sort-num">{{ row.sortOrder }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="状态" width="70" align="center">
+                  <template #default="{ row }">
+                    <el-tag
+                      size="small"
+                      :type="row.status === 1 ? 'success' : 'info'"
                       effect="light"
                     >
-                      {{ currentDetail.status === 1 ? '启用中' : '已停用' }}
+                      {{ row.status === 1 ? '启用' : '停用' }}
                     </el-tag>
-                    <span class="detail-meta-item" v-if="currentDetail.departmentType">
-                      <el-icon><Menu /></el-icon>
-                      {{ currentDetail.departmentType }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div class="detail-head-right">
-                <el-button plain :icon="Back" @click="switchToList">返回列表</el-button>
-                <el-button type="primary" :icon="Edit" @click="openEditDialog(currentDetail)">编辑</el-button>
-                <el-button type="danger" plain :icon="Delete" @click="handleDelete(currentDetail)">删除</el-button>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="110" fixed="right" align="center">
+                  <template #default="{ row }">
+                    <el-tooltip content="查看" placement="top">
+                      <el-button type="primary" link :icon="View" @click="viewDetail(row)" />
+                    </el-tooltip>
+                    <el-tooltip content="编辑" placement="top">
+                      <el-button type="primary" link :icon="Edit" @click="openEditDialog(row)" />
+                    </el-tooltip>
+                    <el-tooltip content="删除" placement="top">
+                      <el-button type="danger" link :icon="Delete" @click="handleDelete(row)" />
+                    </el-tooltip>
+                  </template>
+                </el-table-column>
+              </el-table>
               </div>
             </div>
 
-            <el-row :gutter="16" class="info-cards">
-              <el-col :span="8">
-                <div class="info-card">
-                  <div class="info-card-title">
-                    <el-icon><Location /></el-icon>
-                    <span>位置信息</span>
+            <!-- 详情视图 -->
+            <div v-else :key="'detail-' + selectedId" class="right-pane detail-scroll">
+              <div class="detail-wrapper">
+                <div class="detail-header">
+                  <div class="detail-head-left">
+                    <div class="detail-avatar">
+                      <el-icon><OfficeBuilding /></el-icon>
+                    </div>
+                    <div>
+                      <div class="detail-name">{{ currentDetail.name }}</div>
+                      <div class="detail-meta">
+                        <el-tag size="small" type="info" effect="plain">
+                          {{ currentDetail.code || '未分配编号' }}
+                        </el-tag>
+                        <el-tag
+                          size="small"
+                          :type="currentDetail.status === 1 ? 'success' : 'info'"
+                          effect="light"
+                        >
+                          {{ currentDetail.status === 1 ? '启用中' : '已停用' }}
+                        </el-tag>
+                        <span class="detail-meta-item" v-if="currentDetail.departmentType">
+                          <el-icon><Menu /></el-icon>
+                          {{ currentDetail.departmentType }}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="info-card-row">
-                    <span class="info-card-label">楼层</span>
-                    <span class="info-card-value">{{ currentDetail.floor || '-' }}</span>
-                  </div>
-                  <div class="info-card-row">
-                    <span class="info-card-label">联系电话</span>
-                    <span class="info-card-value">{{ currentDetail.phone || '-' }}</span>
-                  </div>
-                </div>
-              </el-col>
-              <el-col :span="8">
-                <div class="info-card">
-                  <div class="info-card-title">
-                    <el-icon><Setting /></el-icon>
-                    <span>组织信息</span>
-                  </div>
-                  <div class="info-card-row">
-                    <span class="info-card-label">上级科室</span>
-                    <span class="info-card-value">{{ parentName(currentDetail.parentId) || '无' }}</span>
-                  </div>
-                  <div class="info-card-row">
-                    <span class="info-card-label">科室类型</span>
-                    <span class="info-card-value">{{ currentDetail.departmentType || '-' }}</span>
-                  </div>
-                  <div class="info-card-row">
-                    <span class="info-card-label">排序号</span>
-                    <span class="info-card-value">{{ currentDetail.sortOrder }}</span>
+                  <div class="detail-head-right">
+                    <el-button plain :icon="Back" @click="switchToList">返回列表</el-button>
+                    <el-button type="primary" :icon="Edit" @click="openEditDialog(currentDetail)">编辑</el-button>
+                    <el-button type="danger" plain :icon="Delete" @click="handleDelete(currentDetail)">删除</el-button>
                   </div>
                 </div>
-              </el-col>
-              <el-col :span="8">
-                <div class="info-card">
-                  <div class="info-card-title">
-                    <el-icon><Document /></el-icon>
-                    <span>科室简介</span>
-                  </div>
-                  <div class="info-card-desc">{{ currentDetail.description || '暂无简介' }}</div>
-                </div>
-              </el-col>
-            </el-row>
-          </div>
+
+                <el-row :gutter="16" class="info-cards">
+                  <el-col :span="8">
+                    <div class="info-card">
+                      <div class="info-card-title">
+                        <el-icon><Location /></el-icon>
+                        <span>位置信息</span>
+                      </div>
+                      <div class="info-card-row">
+                        <span class="info-card-label">楼层</span>
+                        <span class="info-card-value">{{ currentDetail.floor || '-' }}</span>
+                      </div>
+                      <div class="info-card-row">
+                        <span class="info-card-label">联系电话</span>
+                        <span class="info-card-value">{{ currentDetail.phone || '-' }}</span>
+                      </div>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="info-card">
+                      <div class="info-card-title">
+                        <el-icon><Setting /></el-icon>
+                        <span>组织信息</span>
+                      </div>
+                      <div class="info-card-row">
+                        <span class="info-card-label">上级科室</span>
+                        <span class="info-card-value">{{ parentName(currentDetail.parentId) || '无' }}</span>
+                      </div>
+                      <div class="info-card-row">
+                        <span class="info-card-label">科室类型</span>
+                        <span class="info-card-value">{{ currentDetail.departmentType || '-' }}</span>
+                      </div>
+                      <div class="info-card-row">
+                        <span class="info-card-label">排序号</span>
+                        <span class="info-card-value">{{ currentDetail.sortOrder }}</span>
+                      </div>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="info-card">
+                      <div class="info-card-title">
+                        <el-icon><Document /></el-icon>
+                        <span>科室简介</span>
+                      </div>
+                      <div class="info-card-desc">{{ currentDetail.description || '暂无简介' }}</div>
+                    </div>
+                  </el-col>
+                </el-row>
+              </div>
+            </div>
+          </transition>
         </div>
       </div>
     </el-card>
@@ -551,6 +561,10 @@ function handleTreeNodeClick(data) {
   loadDetail(data.id)
 }
 
+function toggleNodeExpand(node) {
+  node.expanded = !node.expanded
+}
+
 async function loadDetail(id) {
   try {
     const detail = await getDepartmentDetail(id)
@@ -705,26 +719,33 @@ onMounted(() => {
 
 <style scoped>
 .department-page {
-  width: 100%;
-  min-height: 100%;
-  padding: 24px;
+  height: 100%;
+  padding: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ========== 顶部：与排班管理页面一致 ========== */
 .department-card {
   border-radius: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
 }
 
 .department-card :deep(.el-card__header) {
-  padding: 18px 24px;
+  padding: 14px 20px;
+  flex-shrink: 0;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #303133;
 }
@@ -735,26 +756,49 @@ onMounted(() => {
 }
 
 .department-card :deep(.el-card__body) {
-  padding: 20px 24px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 20px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ========== 主体：左栏目录 + 右栏列表/详情 ========== */
 .main-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
-  align-items: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
 }
 
 /* ========== 左栏：科室目录 ========== */
 .sidebar {
+  flex-shrink: 0;
+  width: 280px;
   background: #fafbfc;
   border: 1px solid #ebeef5;
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
   padding: 16px;
   box-sizing: border-box;
-  position: sticky;
-  top: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 4px;
 }
 
 .sidebar-head {
@@ -868,21 +912,17 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 13px;
   flex-shrink: 0;
+  color: #909399;
 }
 
-.dept-tree-icon.icon-root {
+.dept-tree-icon-toggle {
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.dept-tree-icon-toggle:hover {
   color: #409eff;
   background: #ecf5ff;
-}
-
-.dept-tree-icon.icon-leaf {
-  color: #67c23a;
-  background: #f0f9eb;
-}
-
-.dept-tree-icon.icon-sub {
-  color: #909399;
-  background: #f4f4f5;
 }
 
 .dept-tree-name {
@@ -904,16 +944,67 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-/* ========== 右栏：列表工具条 ========== */
+/* ========== 右栏：列表 + 详情 ========== */
 .content-area {
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .list-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.table-scroll .el-table) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ========== 列表 / 详情 切换动画 ========== */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.985);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.99);
 }
 
 /* ========== 列表表格单元格 ========== */

@@ -3,10 +3,10 @@
     <div class="login-card">
       <div class="login-header">
         <div class="brand">
-          <span class="brand-icon">🩺</span>
+          <span class="brand-icon">🏥</span>
           <div class="brand-text">
-            <h1>医生排班管理系统</h1>
-            <p>Doctor Scheduling Platform</p>
+            <h1>医院综合管理平台</h1>
+            <p>Hospital Management Platform · 管理员端</p>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@
     </div>
 
     <div class="copyright">
-      <span>© {{ currentYear }} 医生排班管理系统 · 管理员端</span>
+      <span>© {{ currentYear }} 医院综合管理平台 · 管理员后台</span>
     </div>
   </div>
 </template>

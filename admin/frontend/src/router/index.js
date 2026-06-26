@@ -16,13 +16,7 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '首页', requiresAuth: true }
-      },
-      {
-        path: 'schedule',
-        name: 'Schedule',
-        component: () => import('@/views/admin/Schedule.vue'),
-        meta: { title: '排班管理', requiresAuth: true }
+        meta: { title: '工作台', requiresAuth: true }
       },
       {
         path: 'department',
@@ -35,6 +29,12 @@ const routes = [
         name: 'Doctor',
         component: () => import('@/views/admin/Doctor.vue'),
         meta: { title: '医生管理', requiresAuth: true }
+      },
+      {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/admin/Schedule.vue'),
+        meta: { title: '排班管理', requiresAuth: true }
       }
     ]
   }
@@ -55,7 +55,7 @@ function hasToken() {
 
 router.beforeEach((to, from, next) => {
   const title = to.meta?.title
-  document.title = (title ? title + ' - ' : '') + '医生排班管理系统'
+  document.title = (title ? title + ' - ' : '') + '医院综合管理平台'
 
   if (to.meta?.requiresAuth && !hasToken()) {
     next({ name: 'Login', query: { redirect: to.fullPath } })

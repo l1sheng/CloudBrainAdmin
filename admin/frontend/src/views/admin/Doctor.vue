@@ -14,31 +14,66 @@
 
       <el-form :inline="true" :model="queryForm" class="query-bar" @submit.prevent>
         <el-form-item label="科室">
-          <el-select v-model="queryForm.departmentId" placeholder="请选择科室" clearable filterable style="width: 180px">
-            <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
+          <el-select
+            v-model="queryForm.departmentId"
+            placeholder="请选择科室"
+            clearable
+            filterable
+            :filter-method="filterDepartment"
+            @change="onSearch"
+            style="width: 180px"
+          >
+            <template v-if="hasMultipleDeptTypes">
+              <el-option-group
+                v-for="group in filteredDepartmentsByType"
+                :key="group.type"
+                :label="group.type"
+              >
+                <el-option
+                  v-for="dept in group.items"
+                  :key="dept.id"
+                  :label="formatDeptLabel(dept)"
+                  :value="dept.id"
+                >
+                  <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                  <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                </el-option>
+              </el-option-group>
+            </template>
+            <template v-else>
+              <el-option
+                v-for="dept in filteredDepartments"
+                :key="dept.id"
+                :label="formatDeptLabel(dept)"
+                :value="dept.id"
+              >
+                <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+              </el-option>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item label="姓名 / 工号">
           <el-input v-model="queryForm.keyword" placeholder="姓名 / 工号 / 专长" clearable style="width: 220px" @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="职称">
-          <el-select v-model="queryForm.title" placeholder="请选择" clearable style="width: 130px">
+          <el-select v-model="queryForm.title" placeholder="请选择" clearable style="width: 130px" @change="onSearch">
             <el-option v-for="t in titleOptions" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 120px">
+          <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 120px" @change="onSearch">
             <el-option label="启用" :value="1" />
             <el-option label="停用" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
-          <el-button :icon="RefreshLeft" @click="onReset">重置</el-button>
+          <el-button type="warning" :icon="RefreshLeft" @click="onReset">重置</el-button>
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" stripe border style="width: 100%" empty-text="暂无医生数据" v-loading="loading">
+      <div class="table-wrap">
+      <el-table :data="tableData" stripe border style="width: 100%" height="100%" empty-text="暂无医生数据" v-loading="loading">
         <el-table-column prop="doctorNo" label="工号" width="110" />
         <el-table-column prop="doctorName" label="姓名" width="100" />
         <el-table-column label="科室" width="140">
@@ -57,13 +92,14 @@
             <el-switch :model-value="row.status === 1" active-color="#13ce66" inactive-color="#ff4949" @change="handleToggle(row)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="140">
+        <el-table-column label="操作" fixed="right" width="160">
           <template #default="{ row }">
-            <el-button link type="primary" @click="viewDetail(row)">详情</el-button>
-            <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+            <el-button link type="info" class="action-btn action-info" @click="viewDetail(row)">详情</el-button>
+            <el-button link type="primary" class="action-btn action-edit" @click="openEditDialog(row)">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>
+      </div>
 
       <div class="pagination-bar">
         <el-pagination
@@ -94,8 +130,41 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="科室" prop="departmentId">
-              <el-select v-model="formData.departmentId" placeholder="请选择科室" filterable style="width: 100%">
-                <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
+              <el-select
+                v-model="formData.departmentId"
+                placeholder="请选择科室"
+                filterable
+                :filter-method="filterDepartment"
+                style="width: 100%"
+              >
+                <template v-if="hasMultipleDeptTypes">
+                  <el-option-group
+                    v-for="group in filteredDepartmentsByType"
+                    :key="group.type"
+                    :label="group.type"
+                  >
+                    <el-option
+                      v-for="dept in group.items"
+                      :key="dept.id"
+                      :label="formatDeptLabel(dept)"
+                      :value="dept.id"
+                    >
+                      <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                      <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                    </el-option>
+                  </el-option-group>
+                </template>
+                <template v-else>
+                  <el-option
+                    v-for="dept in filteredDepartments"
+                    :key="dept.id"
+                    :label="formatDeptLabel(dept)"
+                    :value="dept.id"
+                  >
+                    <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
+                    <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
+                  </el-option>
+                </template>
               </el-select>
             </el-form-item>
           </el-col>
@@ -167,9 +236,9 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, Download, Search, RefreshLeft } from '@element-plus/icons-vue'
+import { Plus, Refresh, Download, RefreshLeft } from '@element-plus/icons-vue'
 import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments } from '@/api/doctor'
 
 const loading = ref(false)
@@ -177,7 +246,70 @@ const submitting = ref(false)
 const total = ref(0)
 const tableData = ref([])
 const departments = ref([])
+const deptKeyword = ref('')
 const titleOptions = ['主任医师', '副主任医师', '主治医师', '住院医师', '护士']
+
+// -------- 科室下拉选项（按类型分组 + 自定义模糊搜索） --------
+
+const formatDeptLabel = (dept) => {
+  if (!dept) return ''
+  const parts = []
+  if (dept.code) parts.push('[' + dept.code + ']')
+  parts.push(dept.name || '')
+  return parts.join(' ').trim()
+}
+
+const formatDeptSubLabel = (dept) => {
+  if (!dept) return ''
+  const parts = []
+  if (dept.departmentType) parts.push(dept.departmentType)
+  if (dept.floor) parts.push(dept.floor)
+  return parts.join(' · ')
+}
+
+const departmentsByType = computed(() => {
+  const list = departments.value || []
+  if (!list.length) return []
+  const groups = new Map()
+  for (const d of list) {
+    const type = d.departmentType || '其他'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(d)
+  }
+  const types = Array.from(groups.keys()).sort()
+  return types.map((type) => ({ type, items: groups.get(type) }))
+})
+
+const hasMultipleDeptTypes = computed(() => departmentsByType.value.length > 1)
+
+const matchesDeptKeyword = (dept) => {
+  const kw = (deptKeyword.value || '').trim().toLowerCase()
+  if (!kw) return true
+  const haystack = [
+    dept.name || '',
+    dept.code || '',
+    dept.departmentType || '',
+    dept.floor || ''
+  ].join(' ').toLowerCase()
+  return haystack.includes(kw)
+}
+
+const filteredDepartments = computed(() => (departments.value || []).filter(matchesDeptKeyword))
+
+const filteredDepartmentsByType = computed(() => {
+  const list = filteredDepartments.value
+  if (!list.length) return []
+  const groups = new Map()
+  for (const d of list) {
+    const type = d.departmentType || '其他'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(d)
+  }
+  const types = Array.from(groups.keys()).sort()
+  return types.map((type) => ({ type, items: groups.get(type) }))
+})
+
+const filterDepartment = (keyword) => { deptKeyword.value = keyword || '' }
 
 const queryForm = reactive({ departmentId: undefined, keyword: '', title: '', status: undefined, pageNum: 1, pageSize: 10 })
 
@@ -200,6 +332,19 @@ const formRules = {
 
 const detailVisible = ref(false)
 const currentDetail = ref(null)
+
+// 关键字输入防抖搜索（避免每按一个键发一次请求）
+let keywordDebounceTimer = null
+watch(
+  () => queryForm.keyword,
+  () => {
+    if (keywordDebounceTimer) clearTimeout(keywordDebounceTimer)
+    keywordDebounceTimer = setTimeout(() => {
+      queryForm.pageNum = 1
+      loadList()
+    }, 300)
+  }
+)
 
 onMounted(async () => {
   try { departments.value = await listDepartments() } catch { departments.value = [] }
@@ -338,11 +483,62 @@ async function exportList() {
 </script>
 
 <style scoped>
-.doctor-page { min-height: 100%; }
-.doctor-card { background: #fff; }
+.doctor-page { height: 100%; padding: 0; display: flex; flex-direction: column; }
+.doctor-card { background: #fff; height: 100%; display: flex; flex-direction: column; margin: 0; }
+:deep(.doctor-card .el-card__header) { flex-shrink: 0; padding: 14px 20px; }
+:deep(.doctor-card .el-card__body) { flex: 1 1 auto; display: flex; flex-direction: column; padding: 12px 20px; min-height: 0; overflow: hidden; }
 .page-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 600; color: #303133; }
 .header-actions { display: flex; gap: 8px; }
-.query-bar { padding: 4px 8px 12px; }
-.pagination-bar { display: flex; justify-content: flex-end; padding-top: 16px; }
+.query-bar { padding: 4px 0 12px; flex-shrink: 0; }
+.table-wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+:deep(.table-wrap .el-table) { flex: 1 1 auto; min-height: 0; }
+.pagination-bar { display: flex; justify-content: flex-end; padding-top: 12px; flex-shrink: 0; }
 .doctor-form { padding: 4px 8px; }
+
+/* 表格操作按钮 —— 字号加大 + 颜色区分 */
+.action-btn {
+  font-size: 15px;
+  font-weight: 500;
+  padding: 0 6px;
+  margin-right: 8px;
+  letter-spacing: 1px;
+}
+.action-btn:last-child { margin-right: 0; }
+
+:deep(.action-btn.action-info .el-button__inner) { color: #67c23a; }
+:deep(.action-btn.action-info:hover .el-button__inner) { color: #85ce61; }
+:deep(.action-btn.action-edit .el-button__inner) { color: #409eff; font-weight: 600; }
+:deep(.action-btn.action-edit:hover .el-button__inner) { color: #66b1ff; }
+
+/* 科室下拉选项样式（双行主副标题） */
+.dept-option-main {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.4;
+}
+.dept-option-sub {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.dept-option-sub:empty { display: none; }
+
+/* 让 el-select-dropdown__item 高度随内容自适应（原本固定 34px，双行会被截断） */
+:deep(.el-select-dropdown__item) {
+  height: auto;
+  min-height: 34px;
+  line-height: 1.4;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: none;
+}
+:deep(.el-select-dropdown__item.hover),
+:deep(.el-select-dropdown__item:hover) {
+  background-color: #f5f7fa;
+}
+:deep(.el-select-dropdown__group) {
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
 </style>
