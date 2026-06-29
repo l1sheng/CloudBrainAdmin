@@ -76,6 +76,8 @@
       <el-table :data="tableData" stripe border style="width: 100%" height="100%" empty-text="暂无医生数据" v-loading="loading">
         <el-table-column prop="doctorNo" label="工号" width="110" />
         <el-table-column prop="doctorName" label="姓名" width="100" />
+        <el-table-column prop="loginUsername" label="登录账号" width="120" />
+        <el-table-column prop="roleName" label="权限" width="110" />
         <el-table-column label="科室" width="140">
           <template #default="{ row }">
             <el-tag size="small" effect="plain">{{ row.departmentName }}</el-tag>
@@ -126,6 +128,36 @@
           <el-col :span="12">
             <el-form-item label="工号" prop="doctorNo">
               <el-input v-model="formData.doctorNo" placeholder="请输入工号" maxlength="50" :readonly="dialogMode === 'edit'" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="权限角色" prop="roleId">
+              <el-select v-model="formData.roleId" placeholder="请选择权限角色" filterable style="width: 100%">
+                <el-option
+                  v-for="r in doctorRoles"
+                  :key="r.roleId"
+                  :label="r.roleName"
+                  :value="r.roleId"
+                >
+                  <div class="dept-option-main">{{ r.roleName }}</div>
+                  <div v-if="r.description" class="dept-option-sub">{{ r.description }}</div>
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="登录账号" prop="loginUsername">
+              <el-input v-model="formData.loginUsername" :placeholder="dialogMode === 'create' ? '留空则默认用工号' : '请输入登录账号'" maxlength="50" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="登录密码" prop="loginPassword">
+              <el-input
+                v-model="formData.loginPassword"
+                :placeholder="dialogMode === 'create' ? '留空则默认 123456' : '仅在需要修改时填写'"
+                maxlength="50"
+                show-password
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -214,10 +246,12 @@
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="医生详情" width="560px" destroy-on-close>
+    <el-dialog v-model="detailVisible" title="医生详情" width="600px" destroy-on-close>
       <el-descriptions :column="2" border v-if="currentDetail">
         <el-descriptions-item label="姓名">{{ currentDetail.doctorName }}</el-descriptions-item>
         <el-descriptions-item label="工号">{{ currentDetail.doctorNo }}</el-descriptions-item>
+        <el-descriptions-item label="登录账号">{{ currentDetail.loginUsername || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="权限角色">{{ currentDetail.roleName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="科室">{{ currentDetail.departmentName }}</el-descriptions-item>
         <el-descriptions-item label="职称">{{ currentDetail.title || '-' }}</el-descriptions-item>
         <el-descriptions-item label="医生类型">{{ currentDetail.doctorType || '-' }}</el-descriptions-item>
@@ -239,13 +273,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Download, RefreshLeft } from '@element-plus/icons-vue'
-import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments } from '@/api/doctor'
+import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments, listDoctorRoles } from '@/api/doctor'
 
 const loading = ref(false)
 const submitting = ref(false)
 const total = ref(0)
 const tableData = ref([])
 const departments = ref([])
+const doctorRoles = ref([])
 const deptKeyword = ref('')
 const titleOptions = ['主任医师', '副主任医师', '主治医师', '住院医师', '护士']
 
@@ -318,12 +353,14 @@ const dialogMode = ref('create')
 const formRef = ref(null)
 const formData = reactive({
   doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
-  departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: ''
+  departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: '',
+  loginUsername: '', loginPassword: '', roleId: undefined
 })
 
 const formRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   doctorNo: [{ required: true, message: '请输入工号', trigger: 'blur' }],
+  roleId: [{ required: true, message: '请选择权限角色', trigger: 'change' }],
   departmentId: [{ required: true, message: '请选择科室', trigger: 'change' }],
   phone: [{ validator: (_r, v, cb) => (!v || /^1[3-9]\d{9}$/.test(v)) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' }],
   email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
@@ -348,6 +385,7 @@ watch(
 
 onMounted(async () => {
   try { departments.value = await listDepartments() } catch { departments.value = [] }
+  try { doctorRoles.value = await listDoctorRoles() } catch { doctorRoles.value = [] }
   await loadList()
 })
 
@@ -382,7 +420,8 @@ function onReset() {
 function resetFormData() {
   Object.assign(formData, {
     doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
-    departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: ''
+    departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: '',
+    loginUsername: '', loginPassword: '', roleId: undefined
   })
 }
 
@@ -395,7 +434,8 @@ function openEditDialog(row) {
     doctorId: row.doctorId, name: row.doctorName || '', doctorNo: row.doctorNo || '',
     phone: row.phone || '', email: row.email || '',
     departmentId: row.departmentId, title: row.title || '', doctorType: row.doctorType || '主治',
-    specialty: row.specialty || '', hireDate: row.hireDate || ''
+    specialty: row.specialty || '', hireDate: row.hireDate || '',
+    loginUsername: row.loginUsername || '', loginPassword: '', roleId: row.roleId
   })
   dialogVisible.value = true
 }
@@ -411,15 +451,19 @@ async function submitForm() {
       phone: formData.phone?.trim() || null, email: formData.email?.trim() || null,
       departmentId: formData.departmentId, title: formData.title,
       doctorType: formData.doctorType || '主治', specialty: formData.specialty?.trim() || null,
-      hireDate: formData.hireDate || null
+      hireDate: formData.hireDate || null,
+      loginUsername: formData.loginUsername?.trim() || null,
+      loginPassword: formData.loginPassword?.trim() || null,
+      roleId: formData.roleId || null
     }
 
     if (dialogMode.value === 'create') {
       await createDoctor(payload)
-      ElMessage.success('医生创建成功，默认密码 123456')
+      ElMessage.success('医生创建成功，默认登录账号为工号，默认密码 123456')
     } else {
       const update = { ...payload }
       delete update.doctorNo
+      // 只有非空的账号 / 密码才会在后端被更新
       await updateDoctor(formData.doctorId, update)
       ElMessage.success('医生信息已更新')
     }
@@ -465,8 +509,8 @@ async function exportList() {
     const list = await exportDoctors(queryForm.departmentId)
     if (!list || list.length === 0) { ElMessage.warning('当前筛选条件下没有可导出的数据'); return }
 
-    const headers = ['工号', '姓名', '科室', '职称', '医生类型', '专长', '手机', '邮箱', '入职日期', '状态']
-    const rows = list.map(d => [d.doctorNo, d.doctorName, d.departmentName, d.title || '', d.doctorType || '', d.specialty || '', d.phone || '', d.email || '', d.hireDate || '', d.status === 1 ? '启用' : '停用'])
+    const headers = ['工号', '姓名', '登录账号', '权限', '科室', '职称', '医生类型', '专长', '手机', '邮箱', '入职日期', '状态']
+    const rows = list.map(d => [d.doctorNo, d.doctorName, d.loginUsername || '', d.roleName || '', d.departmentName, d.title || '', d.doctorType || '', d.specialty || '', d.phone || '', d.email || '', d.hireDate || '', d.status === 1 ? '启用' : '停用'])
     const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)

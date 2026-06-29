@@ -2,11 +2,14 @@
 
 数据库名称：`doctor_platform`
 
+> **说明**：本文档描述的数据库结构基于 `schema.sql`（基础建表）+ `change.sql`（增量变更）的合并结果。
+> 后端代码（JPA 实体）与数据库结构已核对一致，未发现多余字段。
+
 ## 一、核心表关系概览
 
 以下是各表的主外键关系图（箭头表示外键依赖方向）：
 
-```
+```text
 sys_role
    ↑
    │
@@ -23,6 +26,10 @@ doctor ────────────────┐              │
    │ (doctor_id)       │              │
    │                   │              │
    ├──────── ai_schedule_suggestion   │
+   │              │                   │
+   │              │ (suggestion_id)   │
+   │              ↓                   │
+   │         ai_schedule_suggestion_detail
    │                                  │
    ├──────── registration ────────────┘
    │           │
@@ -60,38 +67,27 @@ doctor ────────────────┐              │
    │
    └──────── drug_stock_record
 
-department ───────────────────────────┐
-   │ (dept_id)                        │
-   │                                  │
-   ├─ doctor                          │
-   │                                  │
-   ├─ doctor_schedule                 │
-   │                                  │
-   ├─ ai_schedule_suggestion          │
-   │                                  │
-   ├─ registration                    │
-   │                                  │
-   ├─ ai_consultation (recommended)   │
-   │                                  │
-   ├─ triage_record (recommended)     │
-   │                                  │
-   ├─ medical_item                    │
-   │                                  │
-   └─ exam_lab_order
+department（支持树形结构，parent_id 自引用）
+   │ (dept_id)
+   │
+   ├── self (parent_id → dept_id)     ── 上级科室
+   ├── doctor
+   ├── doctor_schedule
+   ├── ai_schedule_suggestion
+   ├── registration
+   ├── ai_consultation (recommended)
+   ├── triage_record (recommended)
+   ├── medical_item
+   └── exam_lab_order
 
 patient ──────────────────────────┐
    │ (patient_id)                  │
    │                               │
    ├─ registration                │
-   │                               │
    ├─ outpatient_visit            │
-   │                               │
    ├─ medical_record              │
-   │                               │
    ├─ exam_lab_order              │
-   │                               │
    ├─ fee_order                   │
-   │                               │
    └─ ai_consultation
 ```
 
@@ -103,13 +99,15 @@ patient ────────────────────────
 
 #### 1.1 sys_role（角色表）
 
-**表说明**：定义系统中的用户角色（如管理员、医生、药房人员等），每个用户只能拥有一个角色。
+**表说明**：定义系统中的用户角色，每个用户只能拥有一个角色。
+
+> **change.sql 变更**：原角色 `DOCTOR` 已拆分为 `DOCTOR_CLINIC`（门诊医生，role_id=2）、`DOCTOR_INPATIENT`（住院医生，role_id=4）、`DOCTOR_CHIEF`（主任医师，role_id=5），以支持不同权限的医生登录后进入不同页面。
 
 | 字段 | 类型 | 约束 | 含义 |
 |------|------|------|------|
 | role_id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 角色ID（主键） |
-| role_code | VARCHAR(50) | NOT NULL, UNIQUE | 角色编码（英文标识符，如 `ADMIN`、`DOCTOR`） |
-| role_name | VARCHAR(50) | NOT NULL | 角色名称（中文显示，如"系统管理员"、"医生"） |
+| role_code | VARCHAR(50) | NOT NULL, UNIQUE | 角色编码（如 `ADMIN`、`DOCTOR_CLINIC`、`DOCTOR_INPATIENT`、`DOCTOR_CHIEF`） |
+| role_name | VARCHAR(50) | NOT NULL | 角色名称（如"系统管理员"、"门诊医生"） |
 | description | VARCHAR(255) | 可选 | 角色描述说明 |
 | status | TINYINT | NOT NULL, DEFAULT 1 | 状态：1=启用，0=停用 |
 | created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
@@ -144,19 +142,28 @@ patient ────────────────────────
 
 #### 2.1 department（科室/部门表）
 
-**表说明**：医院的科室或部门信息，医生、排班、挂号等都需要关联科室。
+**表说明**：医院的科室或部门信息，支持多级树形结构（通过 `parent_id` 自引用）。医生、排班、挂号等都需要关联科室。
+
+> **change.sql 变更**：新增 `parent_id`（上级科室ID，支持树形结构）、`floor`（楼层）、`phone`（科室电话）、`sort_order`（排序序号）四个字段，以及自引用外键 `fk_department_parent`。
 
 | 字段 | 类型 | 约束 | 含义 |
 |------|------|------|------|
 | dept_id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 科室ID（主键） |
+| parent_id | BIGINT | 可选, FK→department.dept_id | 上级科室ID（NULL 表示顶级科室） |
 | dept_code | VARCHAR(50) | NOT NULL, UNIQUE | 科室编码（如 `INTERNAL`、`SURGERY`） |
 | dept_name | VARCHAR(100) | NOT NULL | 科室名称（如"内科"、"外科"） |
 | dept_type | VARCHAR(30) | NOT NULL | 科室类型（区分诊疗科室、行政科室等） |
+| floor | VARCHAR(50) | 可选 | 楼层（如"3楼"） |
+| phone | VARCHAR(30) | 可选 | 科室电话 |
 | location | VARCHAR(100) | 可选 | 位置描述（如"门诊楼3楼"） |
 | description | VARCHAR(255) | 可选 | 科室简介 |
 | status | TINYINT | NOT NULL, DEFAULT 1 | 状态：1=启用，0=停用 |
+| sort_order | INT | NOT NULL, DEFAULT 0 | 排序序号（数值越小越靠前） |
 | created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 | updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+
+**外键关系**：
+- `fk_department_parent`: parent_id → department.dept_id（自引用）
 
 ---
 
@@ -194,6 +201,8 @@ patient ────────────────────────
 
 **表说明**：医生信息表，包含医生的专业信息、所属科室等。每个医生必须关联一个系统用户账号。
 
+> **change.sql 变更**：已移除冗余的 `doctor_name` 字段（医生姓名由 `sys_user.real_name` 提供）。
+
 > **设计说明**：本表通过 `user_id` 与 `sys_user` 关联，实现医生信息与登录账号的分离管理。登录认证使用 `sys_user` 的账号密码，医生的专业信息（职称、专长等）存储在此表中。
 
 | 字段 | 类型 | 约束 | 含义 |
@@ -222,6 +231,10 @@ patient ────────────────────────
 
 **表说明**：医生的出诊排班信息，记录每位医生在特定日期和时段的出诊安排和号源数量。
 
+> **change.sql 变更**：
+> 1. `status` 默认值从 `'可预约'` 改为 `'AVAILABLE'`（英文枚举），现有中文数据已迁移为对应英文值（可预约→AVAILABLE，已取消/停诊→CANCELLED）。
+> 2. 新增 `source` 字段，用于区分排班是人工创建（MANUAL）还是 AI 推荐（AI_SUGGESTED）。
+
 | 字段 | 类型 | 约束 | 含义 |
 |------|------|------|------|
 | schedule_id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 排班ID（主键） |
@@ -234,7 +247,8 @@ patient ────────────────────────
 | total_quota | INT | NOT NULL, DEFAULT 0 | 总号源数 |
 | remain_quota | INT | NOT NULL, DEFAULT 0 | 剩余号源数 |
 | registration_fee | DECIMAL(10,2) | NOT NULL, DEFAULT 0.00 | 挂号费 |
-| status | VARCHAR(20) | NOT NULL, DEFAULT '可预约' | 状态（如"可预约"、"已约满"、"已停诊"） |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'AVAILABLE' | 状态（`AVAILABLE`/`FULL`/`CANCELLED`） |
+| source | VARCHAR(30) | NOT NULL, DEFAULT 'MANUAL' | 排班来源（`MANUAL`=人工创建，`AI_SUGGESTED`=AI推荐） |
 | created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 | updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
 
@@ -267,6 +281,28 @@ patient ────────────────────────
 **外键关系**：
 - `fk_ai_schedule_doctor`: doctor_id → doctor.doctor_id
 - `fk_ai_schedule_dept`: dept_id → department.dept_id
+
+---
+
+#### 4.3 ai_schedule_suggestion_detail（AI排班建议明细表）
+
+**表说明**：`change.sql` 新增表。一条 AI 排班建议可能包含多条建议明细（不同医生/不同时段），供管理员逐条确认或忽略。
+
+| 字段 | 类型 | 约束 | 含义 |
+|------|------|------|------|
+| detail_id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 明细ID（主键） |
+| suggestion_id | BIGINT | NOT NULL, FK→ai_schedule_suggestion.suggestion_id | 关联的建议ID |
+| doctor_id | BIGINT | NOT NULL, FK→doctor.doctor_id | 医生ID |
+| doctor_name | VARCHAR(50) | NOT NULL | 医生姓名（冗余字段） |
+| schedule_date | DATE | NOT NULL | 排班日期 |
+| time_slot | VARCHAR(20) | NOT NULL | 时段 |
+| max_appointments | INT | NOT NULL | 建议最大预约数 |
+| reason | TEXT | 可选 | 建议理由 |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 状态（`PENDING`=待确认，`ACCEPTED`=已采纳，`REJECTED`=已忽略） |
+
+**外键关系**：
+- `fk_ai_schedule_detail_suggestion`: suggestion_id → ai_schedule_suggestion.suggestion_id
+- `fk_ai_schedule_detail_doctor`: doctor_id → doctor.doctor_id
 
 ---
 
@@ -489,6 +525,7 @@ patient ────────────────────────
 | order_id | BIGINT | NOT NULL, FK→exam_lab_order.order_id | 关联的订单ID |
 | item_id | BIGINT | NOT NULL, FK→medical_item.item_id | 关联的检查项目ID |
 | item_name | VARCHAR(100) | NOT NULL | 项目名称（冗余字段，便于查询） |
+| item_type | VARCHAR(30) | NOT NULL | 项目类型 |
 | unit_price | DECIMAL(10,2) | NOT NULL, DEFAULT 0.00 | 单价 |
 | quantity | DECIMAL(10,2) | NOT NULL, DEFAULT 1.00 | 数量 |
 | amount | DECIMAL(10,2) | NOT NULL, DEFAULT 0.00 | 金额 |
@@ -832,7 +869,7 @@ patient ────────────────────────
 
 ### 流程1：完整就诊流程
 
-```
+```text
 患者 → 分诊(triage_record) / AI咨询(ai_consultation)
          ↓
      挂号(registration)
@@ -852,21 +889,33 @@ patient ────────────────────────
                                    支付(payment_record)
 ```
 
-### 流程2：科室-医生-排班关系
+### 流程2：AI排班建议流程
 
+```text
+AI 分析生成排班建议(ai_schedule_suggestion)
+         ↓
+建议明细(ai_schedule_suggestion_detail)
+         ↓
+管理员逐条确认/忽略（status: PENDING → ACCEPTED/REJECTED）
+         ↓
+采纳后生成正式排班(doctor_schedule, source='AI_SUGGESTED')
 ```
-department(科室)
+
+### 流程3：科室-医生-排班关系
+
+```text
+department(科室, 支持树形结构)
      ↓ 1:N
 doctor(医生)
      ↓ 1:N
-doctor_schedule(排班)
+doctor_schedule(排班, 支持AI推荐来源)
      ↓ 1:N
 registration(挂号)
 ```
 
-### 流程3：库存变动流程
+### 流程4：库存变动流程
 
-```
+```text
 drug(药品)
   ↓
 drug_stock_record(库存变动记录)
@@ -886,22 +935,53 @@ drug_stock_record(库存变动记录)
 - **doctor** 存储医生专业信息（职称、专长、所属科室）
 - 通过 `user_id` 关联，一个账号对应一个医生身份
 
-### 4.2 状态字段设计
+### 4.2 角色体系
+
+系统角色通过 `change.sql` 演进为更细粒度的权限划分：
+
+| role_id | role_code | role_name | 说明 |
+|---------|-----------|-----------|------|
+| 1 | ADMIN | 系统管理员 | 最高权限 |
+| 2 | DOCTOR_CLINIC | 门诊医生 | 基础门诊医生，处理门诊排班 |
+| 3 | PHARMACY | 药房人员 | 药房发药、退药操作 |
+| 4 | EXAM_DOCTOR | 检查医生 | 负责检查操作（放射科、超声等） |
+| 5 | DOCTOR_CHIEF | 主任医师 | 主任医师，拥有更高权限 |
+| 6 | PATIENT | 患者 | 患者端用户，可挂号、查看报告、缴费 |
+| 7 | LAB_DOCTOR | 检验医生 | 负责检验操作（血液、尿液等） |
+| 8 | REGISTRATION_DOCTOR | 挂号医生 | 负责挂号登记和分诊 |
+
+### 4.3 状态字段设计
 
 大部分业务表都包含 `status` 字段，用于追踪业务状态流转：
 - 挂号：待支付 → 已挂号 → 已就诊 / 已退号
 - 处方：待审核 → 待缴费 → 待发药 → 已发药
 - 订单：待支付 → 已支付 → 已退款
+- 排班状态使用英文枚举：`AVAILABLE` / `FULL` / `CANCELLED`
 
-### 4.3 冗余字段设计
+### 4.4 冗余字段设计
 
 部分表中存在冗余字段（如挂号表中同时有 doctor_id 和 dept_id），目的是：
 - 提高查询效率，减少多表 JOIN
 - 保留数据快照（如处方明细中冗余药品名称，防止药品信息修改后历史数据不一致）
 
-### 4.4 时间戳字段
+### 4.5 时间戳字段
 
-所有表都有 `created_at` 和 `updated_at` 时间戳，用于：
+大部分表都有 `created_at` 和 `updated_at` 时间戳，用于：
 - 数据审计追踪
 - 按时间范围查询统计
 - 记录业务发生时间
+
+### 4.6 数据库变更记录（change.sql）
+
+`change.sql` 是增量变更脚本，执行顺序为 `schema.sql → change.sql → seed-data.sql`，包含以下变更：
+
+| 变更编号 | 目标表 | 变更内容 | 原因 |
+|----------|--------|----------|------|
+| 1 | doctor | 移除 `doctor_name` 字段 | 冗余字段，医生姓名由 sys_user.real_name 提供 |
+| 2 | doctor_schedule | `status` 默认值从中文改为英文枚举 | 前后端代码使用英文值，数据库默认值需匹配 |
+| 3 | doctor_schedule | 新增 `source` 字段 | 区分人工排班和 AI 推荐排班 |
+| 4 | ai_schedule_suggestion_detail | 新建表 | AI 排班建议需要独立的明细表 |
+| 5 | ai_schedule_suggestion_detail | 新增 `status` 字段 | 支持逐条确认/忽略建议明细 |
+| 6 | department | 新增 `parent_id`、`floor`、`phone`、`sort_order` | 支持树形科室结构和展示信息 |
+| 7 | sys_role | 拆分 DOCTOR 角色为 CLINIC/INPATIENT/CHIEF | 不同权限的医生进入不同页面 |
+| 7b | sys_user | 迁移已有医生用户的角色 | 根据 doctor_type/title 自动分配新角色 |

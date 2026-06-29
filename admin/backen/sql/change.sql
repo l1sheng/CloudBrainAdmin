@@ -164,6 +164,8 @@ CALL add_column_if_not_exists('department', 'sort_order',
 CALL add_fk_if_not_exists('department', 'fk_department_parent',
     'ADD CONSTRAINT fk_department_parent FOREIGN KEY (parent_id) REFERENCES department(dept_id)');
 
+-- 注：角色数据（sys_role）由 seed-data.sql 管理
+
 -- ------------------------------------------------------------
 -- 清理：删除临时存储过程
 -- ------------------------------------------------------------

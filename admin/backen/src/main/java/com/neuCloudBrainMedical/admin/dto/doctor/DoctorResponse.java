@@ -14,6 +14,16 @@ public class DoctorResponse {
 	private String phone;
 	private String email;
 
+	/** 登录账号（sys_user.username） */
+	private String loginUsername;
+
+	/** 关联角色 ID */
+	private Long roleId;
+	/** 角色编码（如 DOCTOR_CLINIC / DOCTOR_INPATIENT / DOCTOR_CHIEF） */
+	private String roleCode;
+	/** 角色名称（如 门诊医生 / 住院医生 / 主任医师） */
+	private String roleName;
+
 	private Long departmentId;
 	private String departmentName;
 
@@ -44,6 +54,18 @@ public class DoctorResponse {
 
 	public String getEmail() { return email; }
 	public void setEmail(String email) { this.email = email; }
+
+	public String getLoginUsername() { return loginUsername; }
+	public void setLoginUsername(String loginUsername) { this.loginUsername = loginUsername; }
+
+	public Long getRoleId() { return roleId; }
+	public void setRoleId(Long roleId) { this.roleId = roleId; }
+
+	public String getRoleCode() { return roleCode; }
+	public void setRoleCode(String roleCode) { this.roleCode = roleCode; }
+
+	public String getRoleName() { return roleName; }
+	public void setRoleName(String roleName) { this.roleName = roleName; }
 
 	public Long getDepartmentId() { return departmentId; }
 	public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }

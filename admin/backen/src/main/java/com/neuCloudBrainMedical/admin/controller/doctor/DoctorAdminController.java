@@ -40,6 +40,11 @@ public class DoctorAdminController {
 
 	// ==================== 读操作 ====================
 
+	@GetMapping("/roles")
+	public Result<List<com.neuCloudBrainMedical.admin.dto.doctor.DoctorRoleOption>> listDoctorRoles() {
+		return Result.success(doctorCommandService.listDoctorRoles());
+	}
+
 	@GetMapping("/list")
 	public Result<PageResponse<DoctorResponse>> listDoctors(
 			@RequestParam(required = false) Long departmentId,
@@ -103,7 +108,3 @@ public class DoctorAdminController {
 		return Result.success();
 	}
 }
-
-
-
-

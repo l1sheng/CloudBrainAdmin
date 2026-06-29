@@ -9,11 +9,20 @@ import java.time.LocalDate;
 /**
  * 更新医生请求。
  * 所有字段均可选；doctorNo 不可修改（由 Service 层控制）。
+ * 登录账号/密码/权限角色 字段用于变更 sys_user 中的账号信息。
  */
 public class DoctorUpdateRequest {
 
 	@Size(max = 50, message = "医生姓名长度不能超过50")
 	private String name;
+
+	@Size(max = 50, message = "登录账号长度不能超过50")
+	private String loginUsername;
+
+	@Size(max = 50, message = "密码长度不能超过50")
+	private String loginPassword;
+
+	private Long roleId;
 
 	@Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
 	private String phone;
@@ -40,6 +49,15 @@ public class DoctorUpdateRequest {
 
 	public String getName() { return name; }
 	public void setName(String name) { this.name = name; }
+
+	public String getLoginUsername() { return loginUsername; }
+	public void setLoginUsername(String loginUsername) { this.loginUsername = loginUsername; }
+
+	public String getLoginPassword() { return loginPassword; }
+	public void setLoginPassword(String loginPassword) { this.loginPassword = loginPassword; }
+
+	public Long getRoleId() { return roleId; }
+	public void setRoleId(Long roleId) { this.roleId = roleId; }
 
 	public String getPhone() { return phone; }
 	public void setPhone(String phone) { this.phone = phone; }

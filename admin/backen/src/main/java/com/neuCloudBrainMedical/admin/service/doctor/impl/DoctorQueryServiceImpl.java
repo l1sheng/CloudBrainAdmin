@@ -5,10 +5,12 @@ import com.neuCloudBrainMedical.admin.dto.doctor.DoctorResponse;
 import com.neuCloudBrainMedical.admin.dto.PageResponse;
 import com.neuCloudBrainMedical.admin.entity.department.Department;
 import com.neuCloudBrainMedical.admin.entity.doctor.Doctor;
+import com.neuCloudBrainMedical.admin.entity.SysRole;
 import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.department.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.doctor.DoctorRepository;
+import com.neuCloudBrainMedical.admin.repository.SysRoleRepository;
 import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.doctor.IDoctorQueryService;
 import org.springframework.data.domain.Page;
@@ -32,13 +34,16 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 
 	private final DoctorRepository doctorRepository;
 	private final SysUserRepository sysUserRepository;
+	private final SysRoleRepository sysRoleRepository;
 	private final DepartmentRepository departmentRepository;
 
 	public DoctorQueryServiceImpl(DoctorRepository doctorRepository,
 	                              SysUserRepository sysUserRepository,
+	                              SysRoleRepository sysRoleRepository,
 	                              DepartmentRepository departmentRepository) {
 		this.doctorRepository = doctorRepository;
 		this.sysUserRepository = sysUserRepository;
+		this.sysRoleRepository = sysRoleRepository;
 		this.departmentRepository = departmentRepository;
 	}
 
@@ -58,10 +63,11 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 		}
 
 		Map<Long, SysUser> users = batchLoadUsers(page.getContent());
+		Map<Long, SysRole> roles = batchLoadRoles(users.values());
 		Map<Long, Department> depts = batchLoadDepartments(page.getContent());
 
 		List<DoctorResponse> list = page.stream()
-				.map(d -> toResponse(d, users.get(d.getUserId()), depts.get(d.getDeptId())))
+				.map(d -> toResponse(d, users.get(d.getUserId()), roles.get(userRoleId(users.get(d.getUserId()))), depts.get(d.getDeptId())))
 				.toList();
 
 		return PageResponse.of(page.getTotalElements(), pageNum, safeSize, list);
@@ -72,8 +78,9 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 		Doctor doctor = doctorRepository.findById(id)
 				.orElseThrow(() -> new BusinessException(404, "医生不存在"));
 		SysUser user = sysUserRepository.findById(doctor.getUserId()).orElse(null);
+		SysRole role = user != null ? sysRoleRepository.findById(user.getRoleId()).orElse(null) : null;
 		Department dept = departmentRepository.findById(doctor.getDeptId()).orElse(null);
-		return toResponse(doctor, user, dept);
+		return toResponse(doctor, user, role, dept);
 	}
 
 	@Override
@@ -83,9 +90,10 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 			return List.of();
 		}
 		Map<Long, SysUser> users = batchLoadUsers(doctors);
+		Map<Long, SysRole> roles = batchLoadRoles(users.values());
 		Map<Long, Department> depts = batchLoadDepartments(doctors);
 		return doctors.stream()
-				.map(d -> toResponse(d, users.get(d.getUserId()), depts.get(d.getDeptId())))
+				.map(d -> toResponse(d, users.get(d.getUserId()), roles.get(userRoleId(users.get(d.getUserId()))), depts.get(d.getDeptId())))
 				.toList();
 	}
 
@@ -121,19 +129,38 @@ public class DoctorQueryServiceImpl implements IDoctorQueryService {
 				.stream().collect(Collectors.toMap(SysUser::getUserId, Function.identity()));
 	}
 
+	private Map<Long, SysRole> batchLoadRoles(Collection<SysUser> users) {
+		Set<Long> ids = users.stream()
+				.map(SysUser::getRoleId).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+		return sysRoleRepository.findAllById(ids)
+				.stream().collect(Collectors.toMap(SysRole::getRoleId, Function.identity()));
+	}
+
+	private static Long userRoleId(SysUser user) {
+		return user != null ? user.getRoleId() : null;
+	}
+
 	private Map<Long, Department> batchLoadDepartments(Collection<Doctor> doctors) {
 		Set<Long> ids = doctors.stream().map(Doctor::getDeptId).collect(Collectors.toSet());
 		return departmentRepository.findAllById(ids)
 				.stream().collect(Collectors.toMap(Department::getDeptId, Function.identity()));
 	}
 
-	private DoctorResponse toResponse(Doctor d, SysUser user, Department dept) {
+	private DoctorResponse toResponse(Doctor d, SysUser user, SysRole role, Department dept) {
 		DoctorResponse r = new DoctorResponse();
 		r.setDoctorId(d.getDoctorId());
 		r.setDoctorNo(d.getDoctorNo());
 		r.setDoctorName(user != null ? user.getRealName() : "");
 		r.setPhone(user != null ? user.getPhone() : null);
 		r.setEmail(user != null ? user.getEmail() : null);
+		if (user != null) {
+			r.setLoginUsername(user.getUsername());
+			r.setRoleId(user.getRoleId());
+			if (role != null) {
+				r.setRoleCode(role.getRoleCode());
+				r.setRoleName(role.getRoleName());
+			}
+		}
 		r.setDepartmentId(d.getDeptId());
 		r.setDepartmentName(dept != null ? dept.getDeptName() : "");
 		r.setDoctorType(d.getDoctorType());

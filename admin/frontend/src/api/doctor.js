@@ -27,3 +27,7 @@ export function toggleDoctorStatus(id, force) {
 export function listDepartments() {
   return request({ url: '/admin/department', method: 'get' })
 }
+
+export function listDoctorRoles() {
+  return request({ url: '/admin/doctor/roles', method: 'get' })
+}

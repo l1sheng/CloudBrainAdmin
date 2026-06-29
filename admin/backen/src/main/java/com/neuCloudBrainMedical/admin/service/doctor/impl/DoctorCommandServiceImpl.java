@@ -4,13 +4,16 @@ import com.neuCloudBrainMedical.admin.dto.doctor.BatchImportResult;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorDisableCheckResponse;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorResponse;
+import com.neuCloudBrainMedical.admin.dto.doctor.DoctorRoleOption;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorUpdateRequest;
 import com.neuCloudBrainMedical.admin.entity.doctor.Doctor;
+import com.neuCloudBrainMedical.admin.entity.SysRole;
 import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.doctor.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.RegistrationRepository;
 import com.neuCloudBrainMedical.admin.repository.schedule.ScheduleRepository;
+import com.neuCloudBrainMedical.admin.repository.SysRoleRepository;
 import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.doctor.IDoctorCommandService;
 import com.neuCloudBrainMedical.admin.service.doctor.IDoctorQueryService;
@@ -27,22 +30,39 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 
 	private static final String DEFAULT_PASSWORD = "123456";
 
+	/**
+	 * 医生角色在 sys_role.role_code 里都应该以这个前缀开头，
+	 * 方便在管理后台筛选可用角色。
+	 */
+	private static final String DOCTOR_ROLE_PREFIX = "DOCTOR";
+
 	private final DoctorRepository doctorRepository;
 	private final SysUserRepository sysUserRepository;
+	private final SysRoleRepository sysRoleRepository;
 	private final ScheduleRepository scheduleRepository;
 	private final RegistrationRepository registrationRepository;
 	private final IDoctorQueryService doctorQueryService;
 
 	public DoctorCommandServiceImpl(DoctorRepository doctorRepository,
 	                                SysUserRepository sysUserRepository,
+	                                SysRoleRepository sysRoleRepository,
 	                                ScheduleRepository scheduleRepository,
 	                                RegistrationRepository registrationRepository,
 	                                IDoctorQueryService doctorQueryService) {
 		this.doctorRepository = doctorRepository;
 		this.sysUserRepository = sysUserRepository;
+		this.sysRoleRepository = sysRoleRepository;
 		this.scheduleRepository = scheduleRepository;
 		this.registrationRepository = registrationRepository;
 		this.doctorQueryService = doctorQueryService;
+	}
+
+	@Override
+	public List<DoctorRoleOption> listDoctorRoles() {
+		return sysRoleRepository.findByRoleCodeStartingWithOrderByRoleId(DOCTOR_ROLE_PREFIX)
+				.stream()
+				.map(r -> new DoctorRoleOption(r.getRoleId(), r.getRoleCode(), r.getRoleName(), r.getDescription()))
+				.toList();
 	}
 
 	@Override
@@ -50,11 +70,21 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 	public DoctorResponse createDoctor(DoctorCreateRequest request) {
 		validateUniqueness(request);
 
+		String username = hasText(request.getLoginUsername()) ? request.getLoginUsername() : request.getDoctorNo();
+		String password = hasText(request.getLoginPassword()) ? request.getLoginPassword() : DEFAULT_PASSWORD;
+
+		// 校验 username 唯一
+		if (sysUserRepository.findByUsername(username).isPresent()) {
+			throw new BusinessException(400, "登录账号【" + username + "】已存在");
+		}
+
+		Long roleId = resolveDoctorRoleId(request.getRoleId());
+
 		SysUser user = new SysUser();
-		user.setUsername(request.getDoctorNo());
-		user.setPassword(DEFAULT_PASSWORD);
+		user.setUsername(username);
+		user.setPassword(password);
 		user.setRealName(request.getName());
-		user.setRoleId(2L);
+		user.setRoleId(roleId);
 		user.setPhone(request.getPhone());
 		user.setEmail(request.getEmail());
 		user.setStatus(Doctor.STATUS_ENABLED);
@@ -170,9 +200,38 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		}
 	}
 
+	/**
+	 * 解析角色 id。如果前端传了 id，则校验是否是一个"医生"角色；
+	 * 否则尝试取默认角色；否则取第一个 DOCTOR 前缀角色；否则直接报错。
+	 */
+	private Long resolveDoctorRoleId(Long requestedRoleId) {
+		if (requestedRoleId != null) {
+			SysRole role = sysRoleRepository.findById(requestedRoleId)
+					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
+			if (role.getRoleCode() == null || !role.getRoleCode().startsWith(DOCTOR_ROLE_PREFIX)) {
+				throw new BusinessException(400, "必须选择医生权限角色");
+			}
+			return role.getRoleId();
+		}
+
+		SysRole defaultRole = sysRoleRepository.findByRoleCode("DOCTOR_CLINIC").orElse(null);
+		if (defaultRole != null) {
+			return defaultRole.getRoleId();
+		}
+
+		List<SysRole> allDoctor = sysRoleRepository.findByRoleCodeStartingWithOrderByRoleId(DOCTOR_ROLE_PREFIX);
+		if (allDoctor.isEmpty()) {
+			throw new BusinessException(500, "系统中尚未配置任何医生角色");
+		}
+		return allDoctor.get(0).getRoleId();
+	}
+
 	private void validateUniqueness(DoctorCreateRequest request) {
 		if (doctorRepository.existsByDoctorNo(request.getDoctorNo())) {
 			throw new BusinessException(400, "工号【" + request.getDoctorNo() + "】已存在");
+		}
+		if (hasText(request.getLoginUsername()) && sysUserRepository.findByUsername(request.getLoginUsername()).isPresent()) {
+			throw new BusinessException(400, "登录账号【" + request.getLoginUsername() + "】已存在");
 		}
 		if (request.getPhone() != null && !request.getPhone().isBlank()) {
 			sysUserRepository.findByPhone(request.getPhone()).ifPresent(u -> {
@@ -202,7 +261,39 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (needsUpdate(req.getName(), user.getRealName())) { user.setRealName(req.getName()); changed = true; }
 		if (needsUpdate(req.getPhone(), user.getPhone())) { user.setPhone(req.getPhone()); changed = true; }
 		if (needsUpdate(req.getEmail(), user.getEmail())) { user.setEmail(req.getEmail()); changed = true; }
+
+		// 登录账号（username）变更，必须确保唯一性
+		if (hasText(req.getLoginUsername()) && !req.getLoginUsername().equals(user.getUsername())) {
+			sysUserRepository.findByUsername(req.getLoginUsername()).ifPresent(other -> {
+				if (!other.getUserId().equals(user.getUserId())) {
+					throw new BusinessException(400, "登录账号【" + req.getLoginUsername() + "】已存在");
+				}
+			});
+			user.setUsername(req.getLoginUsername());
+			changed = true;
+		}
+
+		// 密码变更（只有当请求里有值时才会更新）
+		if (hasText(req.getLoginPassword()) && !req.getLoginPassword().equals(user.getPassword())) {
+			user.setPassword(req.getLoginPassword());
+			changed = true;
+		}
+
+		// 角色变更
+		if (req.getRoleId() != null && !req.getRoleId().equals(user.getRoleId())) {
+			SysRole role = sysRoleRepository.findById(req.getRoleId())
+					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
+			if (role.getRoleCode() == null || !role.getRoleCode().startsWith(DOCTOR_ROLE_PREFIX)) {
+				throw new BusinessException(400, "必须选择医生权限角色");
+			}
+			user.setRoleId(req.getRoleId());
+			changed = true;
+		}
 		return changed;
+	}
+
+	private static boolean hasText(String s) {
+		return s != null && !s.isBlank();
 	}
 
 	private static <T> boolean needsUpdate(T incoming, T existing) {

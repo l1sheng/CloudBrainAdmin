@@ -11,6 +11,10 @@ import java.time.LocalDate;
 /**
  * 新增医生请求。
  * 工号（doctorNo）必须全局唯一。
+ * 登录账号（loginUsername）与初始密码（loginPassword）可选：
+ *   - 未填写 loginUsername 时，使用 doctorNo 作为登录账号；
+ *   - 未填写 loginPassword 时，使用默认密码（123456）。
+ * 角色（roleId）可选：默认使用 "门诊医生"（普通医生角色）。
  */
 public class DoctorCreateRequest {
 
@@ -21,6 +25,19 @@ public class DoctorCreateRequest {
 	@NotBlank(message = "工号不能为空")
 	@Size(max = 50, message = "工号长度不能超过50")
 	private String doctorNo;
+
+	@Size(max = 50, message = "登录账号长度不能超过50")
+	private String loginUsername;
+
+	@Size(max = 50, message = "密码长度不能超过50")
+	private String loginPassword;
+
+	/**
+	 * 权限角色。
+	 * 不同角色的医生登录后会进入不同的页面。
+	 * 可选值由 /api/admin/doctor/roles 提供。
+	 */
+	private Long roleId;
 
 	@Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
 	private String phone;
@@ -52,6 +69,15 @@ public class DoctorCreateRequest {
 
 	public String getDoctorNo() { return doctorNo; }
 	public void setDoctorNo(String doctorNo) { this.doctorNo = doctorNo; }
+
+	public String getLoginUsername() { return loginUsername; }
+	public void setLoginUsername(String loginUsername) { this.loginUsername = loginUsername; }
+
+	public String getLoginPassword() { return loginPassword; }
+	public void setLoginPassword(String loginPassword) { this.loginPassword = loginPassword; }
+
+	public Long getRoleId() { return roleId; }
+	public void setRoleId(Long roleId) { this.roleId = roleId; }
 
 	public String getPhone() { return phone; }
 	public void setPhone(String phone) { this.phone = phone; }
