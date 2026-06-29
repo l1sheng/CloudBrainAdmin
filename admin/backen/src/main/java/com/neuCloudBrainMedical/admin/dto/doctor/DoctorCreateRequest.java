@@ -10,11 +10,9 @@ import java.time.LocalDate;
 
 /**
  * 新增医生请求。
- * 工号（doctorNo）必须全局唯一。
- * 登录账号（loginUsername）与初始密码（loginPassword）可选：
- *   - 未填写 loginUsername 时，使用 doctorNo 作为登录账号；
- *   - 未填写 loginPassword 时，使用默认密码（123456）。
- * 角色（roleId）可选：默认使用 "门诊医生"（普通医生角色）。
+ * 工号（doctorNo）和登录账号（loginUsername）由后端根据角色自动生成，前端无需传入。
+ * 生成规则：工号 = D + 日期yyyyMMdd + 自增ID，登录账号 = 角色前缀 + 日期yyyyMMdd + 自增ID。
+ * 未填写 loginPassword 时，使用默认密码（123456）。
  */
 public class DoctorCreateRequest {
 
@@ -22,8 +20,7 @@ public class DoctorCreateRequest {
 	@Size(max = 50, message = "医生姓名长度不能超过50")
 	private String name;
 
-	@NotBlank(message = "工号不能为空")
-	@Size(max = 50, message = "工号长度不能超过50")
+	// 工号由后端自动生成，前端无需传入
 	private String doctorNo;
 
 	@Size(max = 50, message = "登录账号长度不能超过50")

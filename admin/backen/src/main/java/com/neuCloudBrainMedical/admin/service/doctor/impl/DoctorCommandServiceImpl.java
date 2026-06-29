@@ -30,11 +30,15 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 
 	private static final String DEFAULT_PASSWORD = "123456";
 
-	/**
-	 * 医生角色在 sys_role.role_code 里都应该以这个前缀开头，
-	 * 方便在管理后台筛选可用角色。
-	 */
-	private static final String DOCTOR_ROLE_PREFIX = "DOCTOR";
+	/** 角色 code → 登录账号前缀映射（同时也是合法医生角色的白名单） */
+	private static final java.util.Map<String, String> ROLE_PREFIX_MAP = java.util.Map.of(
+			"DOCTOR_CLINIC", "DOC",
+			"DOCTOR_CHIEF", "DOC",
+			"PHARMACY", "PHAR",
+			"LAB_DOCTOR", "LAB",
+			"EXAM_DOCTOR", "EXAM",
+			"REGISTRATION_DOCTOR", "REG"
+	);
 
 	private final DoctorRepository doctorRepository;
 	private final SysUserRepository sysUserRepository;
@@ -59,7 +63,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 
 	@Override
 	public List<DoctorRoleOption> listDoctorRoles() {
-		return sysRoleRepository.findByRoleCodeContainingOrderByRoleId(DOCTOR_ROLE_PREFIX)
+		return sysRoleRepository.findByRoleCodeContainingOrderByRoleId("DOCTOR")
 				.stream()
 				.map(r -> new DoctorRoleOption(r.getRoleId(), r.getRoleCode(), r.getRoleName(), r.getDescription()))
 				.toList();
@@ -68,34 +72,25 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 	@Override
 	@Transactional
 	public DoctorResponse createDoctor(DoctorCreateRequest request) {
-		validateUniqueness(request);
-
-		String username = hasText(request.getLoginUsername()) ? request.getLoginUsername() : request.getDoctorNo();
-		String password = hasText(request.getLoginPassword()) ? request.getLoginPassword() : DEFAULT_PASSWORD;
-
-		// 校验 username 唯一
-		if (sysUserRepository.findByUsername(username).isPresent()) {
-			throw new BusinessException(400, "登录账号【" + username + "】已存在");
+		// 手机号/邮箱唯一性校验（doctorNo 和 loginUsername 由后端自动生成，无需校验）
+		if (request.getPhone() != null && !request.getPhone().isBlank()) {
+			sysUserRepository.findByPhone(request.getPhone()).ifPresent(u -> {
+				throw new BusinessException(400, "手机号已被用户【" + u.getUsername() + "】使用");
+			});
+		}
+		if (request.getEmail() != null && !request.getEmail().isBlank()) {
+			sysUserRepository.findByEmail(request.getEmail()).ifPresent(u -> {
+				throw new BusinessException(400, "邮箱已被用户【" + u.getUsername() + "】使用");
+			});
 		}
 
 		Long roleId = resolveDoctorRoleId(request.getRoleId());
-
-		SysUser user = new SysUser();
-		user.setUsername(username);
-		user.setPassword(password);
-		user.setRealName(request.getName());
-		user.setRoleId(roleId);
-		user.setPhone(request.getPhone());
-		user.setEmail(request.getEmail());
-		user.setStatus(Doctor.STATUS_ENABLED);
-		user.setCreatedAt(LocalDateTime.now());
-		user.setUpdatedAt(LocalDateTime.now());
-		user = sysUserRepository.save(user);
+		SysRole role = sysRoleRepository.findById(roleId)
+				.orElseThrow(() -> new BusinessException(400, "角色不存在"));
+		String rolePrefix = ROLE_PREFIX_MAP.getOrDefault(role.getRoleCode(), "DOC");
 
 		Doctor doctor = new Doctor();
-		doctor.setUserId(user.getUserId());
 		doctor.setDeptId(request.getDepartmentId());
-		doctor.setDoctorNo(request.getDoctorNo());
 		doctor.setDoctorType(request.getDoctorType() != null ? request.getDoctorType() : "主治");
 		doctor.setTitle(request.getTitle());
 		doctor.setSpecialty(request.getSpecialty());
@@ -104,7 +99,49 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		doctor.setStatus(Doctor.STATUS_ENABLED);
 		doctor.setCreatedAt(LocalDateTime.now());
 		doctor.setUpdatedAt(LocalDateTime.now());
+
+		// 先创建 user（username 临时值，保存后更新）
+		SysUser user = new SysUser();
+		user.setPassword(hasText(request.getLoginPassword()) ? request.getLoginPassword() : DEFAULT_PASSWORD);
+		user.setRealName(request.getName());
+		user.setRoleId(roleId);
+		user.setPhone(request.getPhone());
+		user.setEmail(request.getEmail());
+		user.setStatus(Doctor.STATUS_ENABLED);
+		user.setCreatedAt(LocalDateTime.now());
+		user.setUpdatedAt(LocalDateTime.now());
+
+		// 临时值，保存后用自增 ID 生成真实值
+		String tempId = String.valueOf(System.currentTimeMillis());
+		doctor.setDoctorNo("TEMP_" + tempId);
+		user.setUsername("TEMP_" + tempId);
+		user = sysUserRepository.save(user);
+
+		doctor.setUserId(user.getUserId());
+		doctor = doctorRepository.save(doctor);
+
+		// 根据 doctorId 生成工号和登录账号
+		String datePart = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+		String doctorNo = "D" + datePart + doctor.getDoctorId();
+		String loginUsername = rolePrefix + datePart + doctor.getDoctorId();
+
+		if (hasText(request.getLoginUsername())) {
+			loginUsername = request.getLoginUsername(); // 前端已生成则使用前端值
+		}
+
+		// 校验 loginUsername 唯一
+		if (sysUserRepository.findByUsername(loginUsername).isPresent()
+				&& !sysUserRepository.findByUsername(loginUsername).get().getUserId().equals(user.getUserId())) {
+			throw new BusinessException(400, "登录账号【" + loginUsername + "】已存在");
+		}
+
+		doctor.setDoctorNo(doctorNo);
+		doctor.setUpdatedAt(LocalDateTime.now());
 		doctorRepository.save(doctor);
+
+		user.setUsername(loginUsername);
+		user.setUpdatedAt(LocalDateTime.now());
+		sysUserRepository.save(user);
 
 		return doctorQueryService.getDoctorDetail(doctor.getDoctorId());
 	}
@@ -208,7 +245,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (requestedRoleId != null) {
 			SysRole role = sysRoleRepository.findById(requestedRoleId)
 					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
-		if (role.getRoleCode() == null || !role.getRoleCode().contains(DOCTOR_ROLE_PREFIX)) {
+		if (role.getRoleCode() == null || !ROLE_PREFIX_MAP.containsKey(role.getRoleCode())) {
 				throw new BusinessException(400, "必须选择医生权限角色");
 			}
 			return role.getRoleId();
@@ -219,7 +256,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 			return defaultRole.getRoleId();
 		}
 
-		List<SysRole> allDoctor = sysRoleRepository.findByRoleCodeContainingOrderByRoleId(DOCTOR_ROLE_PREFIX);
+		List<SysRole> allDoctor = sysRoleRepository.findByRoleCodeContainingOrderByRoleId("DOCTOR");
 		if (allDoctor.isEmpty()) {
 			throw new BusinessException(500, "系统中尚未配置任何医生角色");
 		}
@@ -283,7 +320,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (req.getRoleId() != null && !req.getRoleId().equals(user.getRoleId())) {
 			SysRole role = sysRoleRepository.findById(req.getRoleId())
 					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
-		if (role.getRoleCode() == null || !role.getRoleCode().contains(DOCTOR_ROLE_PREFIX)) {
+		if (role.getRoleCode() == null || !ROLE_PREFIX_MAP.containsKey(role.getRoleCode())) {
 				throw new BusinessException(400, "必须选择医生权限角色");
 			}
 			user.setRoleId(req.getRoleId());

@@ -115,6 +115,8 @@
                 height="100%"
                 empty-text="暂无科室数据"
                 :header-cell-style="{ background: '#fafafa' }"
+                @row-click="viewDetail"
+                highlight-current-row
               >
                 <el-table-column label="科室" min-width="240">
                   <template #default="{ row }">
@@ -171,16 +173,13 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="110" fixed="right" align="center">
+                <el-table-column label="操作" width="80" fixed="right" align="center">
                   <template #default="{ row }">
-                    <el-tooltip content="查看" placement="top">
-                      <el-button type="primary" link :icon="View" @click="viewDetail(row)" />
-                    </el-tooltip>
                     <el-tooltip content="编辑" placement="top">
-                      <el-button type="primary" link :icon="Edit" @click="openEditDialog(row)" />
+                      <el-button type="primary" link :icon="Edit" @click.stop="openEditDialog(row)" />
                     </el-tooltip>
                     <el-tooltip content="删除" placement="top">
-                      <el-button type="danger" link :icon="Delete" @click="handleDelete(row)" />
+                      <el-button type="danger" link :icon="Delete" @click.stop="handleDelete(row)" />
                     </el-tooltip>
                   </template>
                 </el-table-column>
@@ -390,11 +389,9 @@ import {
   Location,
   Menu,
   OfficeBuilding,
-  Phone,
   Plus,
   Refresh,
-  Search,
-  View
+  Search
 } from '@element-plus/icons-vue'
 import {
   createDepartment,

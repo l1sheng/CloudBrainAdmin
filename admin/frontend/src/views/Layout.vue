@@ -25,6 +25,10 @@
           <el-icon><UserFilled /></el-icon>
           <template #title>医生管理</template>
         </el-menu-item>
+        <el-menu-item index="/role">
+          <el-icon><Lock /></el-icon>
+          <template #title>角色管理</template>
+        </el-menu-item>
         <el-menu-item index="/schedule">
           <el-icon><Calendar /></el-icon>
           <template #title>排班管理</template>
@@ -93,7 +97,8 @@ import {
   ArrowDown,
   SwitchButton,
   OfficeBuilding,
-  UserFilled
+  UserFilled,
+  Lock
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 

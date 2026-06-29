@@ -14,39 +14,17 @@
 
       <el-form :inline="true" :model="queryForm" class="query-bar" @submit.prevent>
         <el-form-item label="科室">
-          <el-select
-            v-model="queryForm.departmentId"
-            placeholder="请选择科室"
-            clearable
-            filterable
-            :filter-method="filterDepartment"
-            @change="onSearch"
-            style="width: 180px"
-          >
+          <el-select v-model="queryForm.departmentId" placeholder="请选择科室" clearable filterable :filter-method="filterDepartment" @change="onSearch" style="width: 180px">
             <template v-if="hasMultipleDeptTypes">
-              <el-option-group
-                v-for="group in filteredDepartmentsByType"
-                :key="group.type"
-                :label="group.type"
-              >
-                <el-option
-                  v-for="dept in group.items"
-                  :key="dept.id"
-                  :label="formatDeptLabel(dept)"
-                  :value="dept.id"
-                >
+              <el-option-group v-for="group in filteredDepartmentsByType" :key="group.type" :label="group.type">
+                <el-option v-for="dept in group.items" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                   <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                   <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
                 </el-option>
               </el-option-group>
             </template>
             <template v-else>
-              <el-option
-                v-for="dept in filteredDepartments"
-                :key="dept.id"
-                :label="formatDeptLabel(dept)"
-                :value="dept.id"
-              >
+              <el-option v-for="dept in filteredDepartments" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                 <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                 <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
               </el-option>
@@ -73,7 +51,7 @@
       </el-form>
 
       <div class="table-wrap">
-      <el-table :data="tableData" stripe border style="width: 100%" height="100%" empty-text="暂无医生数据" v-loading="loading">
+      <el-table ref="tableRef" :data="tableData" stripe border style="width: 100%" height="100%" empty-text="暂无医生数据" v-loading="loading" @row-click="viewDetail" highlight-current-row>
         <el-table-column prop="doctorNo" label="工号" width="110" />
         <el-table-column prop="doctorName" label="姓名" width="100" />
         <el-table-column prop="loginUsername" label="登录账号" width="120" />
@@ -94,25 +72,16 @@
             <el-switch :model-value="row.status === 1" active-color="#13ce66" inactive-color="#ff4949" @change="handleToggle(row)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="160">
+        <el-table-column label="操作" fixed="right" width="120">
           <template #default="{ row }">
-            <el-button link type="info" class="action-btn action-info" @click="viewDetail(row)">详情</el-button>
-            <el-button link type="primary" class="action-btn action-edit" @click="openEditDialog(row)">编辑</el-button>
+            <el-button link type="primary" class="action-btn action-edit" @click.stop="openEditDialog(row)">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>
       </div>
 
       <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="queryForm.pageNum"
-          v-model:page-size="queryForm.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="loadList"
-          @current-change="loadList"
-        />
+        <el-pagination v-model:current-page="queryForm.pageNum" v-model:page-size="queryForm.pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="loadList" @current-change="loadList" />
       </div>
     </el-card>
 
@@ -125,71 +94,41 @@
               <el-input v-model="formData.name" placeholder="请输入姓名" maxlength="50" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="工号" prop="doctorNo">
-              <el-input v-model="formData.doctorNo" placeholder="请输入工号" maxlength="50" :readonly="dialogMode === 'edit'" />
+          <el-col :span="12" v-if="dialogMode === 'edit'">
+            <el-form-item label="工号">
+              <el-input :model-value="formData.doctorNo" disabled />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="权限角色" prop="roleId">
               <el-select v-model="formData.roleId" placeholder="请选择权限角色" filterable style="width: 100%">
-                <el-option
-                  v-for="r in doctorRoles"
-                  :key="r.roleId"
-                  :label="r.roleName"
-                  :value="r.roleId"
-                />
+                <el-option v-for="r in doctorRoles" :key="r.roleId" :label="r.roleName" :value="r.roleId" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="登录账号" prop="loginUsername">
-              <el-input v-model="formData.loginUsername" :placeholder="dialogMode === 'create' ? '留空则默认用工号' : '请输入登录账号'" maxlength="50" />
+            <el-form-item label="登录账号" :prop="dialogMode === 'create' ? '' : 'loginUsername'">
+              <el-input v-model="formData.loginUsername" :disabled="dialogMode === 'create'" :placeholder="dialogMode === 'create' ? '选择角色后自动生成' : '请输入登录账号'" maxlength="50" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="登录密码" prop="loginPassword">
-              <el-input
-                v-model="formData.loginPassword"
-                :placeholder="dialogMode === 'create' ? '留空则默认 123456' : '仅在需要修改时填写'"
-                maxlength="50"
-                show-password
-              />
+              <el-input v-model="formData.loginPassword" :placeholder="dialogMode === 'create' ? '留空则默认 123456' : '仅在需要修改时填写'" maxlength="50" show-password />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="科室" prop="departmentId">
-              <el-select
-                v-model="formData.departmentId"
-                placeholder="请选择科室"
-                filterable
-                :filter-method="filterDepartment"
-                style="width: 100%"
-              >
+              <el-select v-model="formData.departmentId" placeholder="请选择科室" filterable :filter-method="filterDepartment" style="width: 100%">
                 <template v-if="hasMultipleDeptTypes">
-                  <el-option-group
-                    v-for="group in filteredDepartmentsByType"
-                    :key="group.type"
-                    :label="group.type"
-                  >
-                    <el-option
-                      v-for="dept in group.items"
-                      :key="dept.id"
-                      :label="formatDeptLabel(dept)"
-                      :value="dept.id"
-                    >
+                  <el-option-group v-for="group in filteredDepartmentsByType" :key="group.type" :label="group.type">
+                    <el-option v-for="dept in group.items" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                       <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                       <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
                     </el-option>
                   </el-option-group>
                 </template>
                 <template v-else>
-                  <el-option
-                    v-for="dept in filteredDepartments"
-                    :key="dept.id"
-                    :label="formatDeptLabel(dept)"
-                    :value="dept.id"
-                  >
+                  <el-option v-for="dept in filteredDepartments" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                     <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                     <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
                   </el-option>
@@ -243,7 +182,7 @@
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="医生详情" width="600px" destroy-on-close>
+    <el-dialog v-model="detailVisible" title="医生详情" width="600px" destroy-on-close @close="onDetailClose">
       <el-descriptions :column="2" border v-if="currentDetail">
         <el-descriptions-item label="姓名">{{ currentDetail.doctorName }}</el-descriptions-item>
         <el-descriptions-item label="工号">{{ currentDetail.doctorNo }}</el-descriptions-item>
@@ -281,6 +220,16 @@ const doctorRoles = ref([])
 const deptKeyword = ref('')
 const titleOptions = ['主任医师', '副主任医师', '主治医师', '住院医师', '护士']
 
+// 角色 code → 登录账号前缀映射
+const rolePrefixMap = {
+  'DOCTOR_CLINIC': 'DOC',
+  'PHARMACY': 'PHAR',
+  'LAB_DOCTOR': 'LAB',
+  'EXAM_DOCTOR': 'EXAM',
+  'REGISTRATION_DOCTOR': 'REG',
+  'DOCTOR_CHIEF': 'DOC'
+}
+
 // -------- 科室下拉选项（按类型分组 + 自定义模糊搜索） --------
 
 const formatDeptLabel = (dept) => {
@@ -317,12 +266,7 @@ const hasMultipleDeptTypes = computed(() => departmentsByType.value.length > 1)
 const matchesDeptKeyword = (dept) => {
   const kw = (deptKeyword.value || '').trim().toLowerCase()
   if (!kw) return true
-  const haystack = [
-    dept.name || '',
-    dept.code || '',
-    dept.departmentType || '',
-    dept.floor || ''
-  ].join(' ').toLowerCase()
+  const haystack = [dept.name || '', dept.code || '', dept.departmentType || '', dept.floor || ''].join(' ').toLowerCase()
   return haystack.includes(kw)
 }
 
@@ -354,9 +298,23 @@ const formData = reactive({
   loginUsername: '', loginPassword: '', roleId: undefined
 })
 
+// 监听角色变化，自动生成工号和登录账号提示（仅新增模式）
+watch(() => formData.roleId, (newRoleId) => {
+  if (dialogMode.value !== 'create' || !newRoleId) return
+  const role = doctorRoles.value.find(r => r.roleId === newRoleId)
+  if (role) {
+    const prefix = rolePrefixMap[role.roleCode] || 'DOC'
+    const now = new Date()
+    const datePart = String(now.getFullYear()) +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0')
+    formData.doctorNo = 'D' + datePart + '?'
+    formData.loginUsername = prefix + datePart + '?'
+  }
+})
+
 const formRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  doctorNo: [{ required: true, message: '请输入工号', trigger: 'blur' }],
   roleId: [{ required: true, message: '请选择权限角色', trigger: 'change' }],
   departmentId: [{ required: true, message: '请选择科室', trigger: 'change' }],
   phone: [{ validator: (_r, v, cb) => (!v || /^1[3-9]\d{9}$/.test(v)) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' }],
@@ -366,6 +324,7 @@ const formRules = {
 
 const detailVisible = ref(false)
 const currentDetail = ref(null)
+const tableRef = ref(null)
 
 // 关键字输入防抖搜索（避免每按一个键发一次请求）
 let keywordDebounceTimer = null
@@ -444,17 +403,17 @@ async function submitForm() {
   submitting.value = true
   try {
     const payload = {
-      name: formData.name?.trim(), doctorNo: formData.doctorNo?.trim(),
+      name: formData.name?.trim(),
       phone: formData.phone?.trim() || null, email: formData.email?.trim() || null,
       departmentId: formData.departmentId, title: formData.title,
       doctorType: formData.doctorType || '主治', specialty: formData.specialty?.trim() || null,
       hireDate: formData.hireDate || null,
-      loginUsername: formData.loginUsername?.trim() || null,
       loginPassword: formData.loginPassword?.trim() || null,
       roleId: formData.roleId || null
     }
 
     if (dialogMode.value === 'create') {
+      // 工号和登录账号由后端根据角色自动生成，无需传入
       await createDoctor(payload)
       ElMessage.success('医生创建成功，默认登录账号为工号，默认密码 123456')
     } else {
@@ -501,6 +460,12 @@ async function handleToggle(row) {
 
 function viewDetail(row) { currentDetail.value = row; detailVisible.value = true }
 
+// 详情弹窗关闭时清除行选中状态
+function onDetailClose() {
+  currentDetail.value = null
+  if (tableRef.value) tableRef.value.setCurrentRow()
+}
+
 async function exportList() {
   try {
     const list = await exportDoctors(queryForm.departmentId)
@@ -528,7 +493,7 @@ async function exportList() {
 .doctor-card { background: #fff; height: 100%; display: flex; flex-direction: column; margin: 0; }
 :deep(.doctor-card .el-card__header) { flex-shrink: 0; padding: 14px 20px; }
 :deep(.doctor-card .el-card__body) { flex: 1 1 auto; display: flex; flex-direction: column; padding: 12px 20px; min-height: 0; overflow: hidden; }
-.page-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 600; color: #303133; }
+.page-header { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 600; color: #303133; }
 .header-actions { display: flex; gap: 8px; }
 .query-bar { padding: 4px 0 12px; flex-shrink: 0; }
 .table-wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -536,7 +501,6 @@ async function exportList() {
 .pagination-bar { display: flex; justify-content: flex-end; padding-top: 12px; flex-shrink: 0; }
 .doctor-form { padding: 4px 8px; }
 
-/* 表格操作按钮 —— 字号加大 + 颜色区分 */
 .action-btn {
   font-size: 15px;
   font-weight: 500;
@@ -546,40 +510,14 @@ async function exportList() {
 }
 .action-btn:last-child { margin-right: 0; }
 
-:deep(.action-btn.action-info .el-button__inner) { color: #67c23a; }
-:deep(.action-btn.action-info:hover .el-button__inner) { color: #85ce61; }
 :deep(.action-btn.action-edit .el-button__inner) { color: #409eff; font-weight: 600; }
 :deep(.action-btn.action-edit:hover .el-button__inner) { color: #66b1ff; }
 
-/* 科室下拉选项样式（双行主副标题） */
-.dept-option-main {
-  font-size: 14px;
-  color: #303133;
-  line-height: 1.4;
-}
-.dept-option-sub {
-  font-size: 12px;
-  color: #909399;
-  line-height: 1.4;
-  margin-top: 2px;
-}
+.dept-option-main { font-size: 14px; color: #303133; line-height: 1.4; }
+.dept-option-sub { font-size: 12px; color: #909399; line-height: 1.4; margin-top: 2px; }
 .dept-option-sub:empty { display: none; }
 
-/* 让 el-select-dropdown__item 高度随内容自适应（原本固定 34px，双行会被截断） */
-:deep(.el-select-dropdown__item) {
-  height: auto;
-  min-height: 34px;
-  line-height: 1.4;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  border-bottom: none;
-}
-:deep(.el-select-dropdown__item.hover),
-:deep(.el-select-dropdown__item:hover) {
-  background-color: #f5f7fa;
-}
-:deep(.el-select-dropdown__group) {
-  padding-top: 6px;
-  padding-bottom: 4px;
-}
+:deep(.el-select-dropdown__item) { height: auto; min-height: 34px; line-height: 1.4; padding-top: 6px; padding-bottom: 6px; border-bottom: none; }
+:deep(.el-select-dropdown__item.hover), :deep(.el-select-dropdown__item:hover) { background-color: #f5f7fa; }
+:deep(.el-select-dropdown__group) { padding-top: 6px; padding-bottom: 4px; }
 </style>

@@ -1,0 +1,53 @@
+package com.neuCloudBrainMedical.admin.controller.role;
+
+import com.neuCloudBrainMedical.admin.dto.role.SysRoleRequest;
+import com.neuCloudBrainMedical.admin.dto.role.SysRoleResponse;
+import com.neuCloudBrainMedical.admin.service.role.ISysRoleService;
+import com.neuCloudBrainMedical.admin.util.Result;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/admin/roles")
+public class SysRoleController {
+
+	private final ISysRoleService service;
+
+	public SysRoleController(ISysRoleService service) {
+		this.service = service;
+	}
+
+	@GetMapping
+	public Result<List<SysRoleResponse>> listRoles() {
+		return Result.success(service.listRoles());
+	}
+
+	@GetMapping("/{id}")
+	public Result<SysRoleResponse> getRoleDetail(@PathVariable Long id) {
+		return Result.success(service.getRoleDetail(id));
+	}
+
+	@PostMapping
+	public Result<SysRoleResponse> createRole(@Valid @RequestBody SysRoleRequest request) {
+		return Result.success(service.createRole(request));
+	}
+
+	@PutMapping("/{id}")
+	public Result<SysRoleResponse> updateRole(@PathVariable Long id, @Valid @RequestBody SysRoleRequest request) {
+		return Result.success(service.updateRole(id, request));
+	}
+
+	@DeleteMapping("/{id}")
+	public Result<Void> deleteRole(@PathVariable Long id) {
+		service.deleteRole(id);
+		return Result.success(null);
+	}
+
+	@PatchMapping("/{id}/toggle-status")
+	public Result<Void> toggleStatus(@PathVariable Long id) {
+		service.toggleStatus(id);
+		return Result.success(null);
+	}
+}

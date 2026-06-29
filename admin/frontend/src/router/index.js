@@ -31,6 +31,12 @@ const routes = [
         meta: { title: '医生管理', requiresAuth: true }
       },
       {
+        path: 'role',
+        name: 'Role',
+        component: () => import('@/views/admin/Role.vue'),
+        meta: { title: '角色管理', requiresAuth: true }
+      },
+      {
         path: 'schedule',
         name: 'Schedule',
         component: () => import('@/views/admin/Schedule.vue'),
