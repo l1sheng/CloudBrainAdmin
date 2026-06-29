@@ -76,41 +76,22 @@ public class ScheduleRegistrationQueryServiceImpl implements IScheduleRegistrati
 	}
 
 	private String mapFeeStatus(String feeStatus) {
-		if (feeStatus == null) return "-";
-		switch (feeStatus) {
-			case "待支付": return "待支付";
-			case "已支付": return "已支付";
-			case "部分退费": return "部分退费";
-			case "已退费": return "已退费";
-			default: return feeStatus;
-		}
+		// 数据库已存中文值，直接返回
+		return feeStatus != null ? feeStatus : "-";
 	}
 
 	private String mapRegistrationStatus(String status) {
-		if (status == null) return "-";
-		switch (status) {
-			case "待支付": return "待支付";
-			case "待接诊": return "待接诊";
-			case "接诊中": return "接诊中";
-			case "已完成": return "已完成";
-			case "已取消": return "已取消";
-			case "爽约": return "爽约";
-			default: return status;
-		}
+		// 数据库已存中文值，直接返回
+		return status != null ? status : "-";
 	}
 
 	private String mapSource(String source) {
+		// 数据库已存中文值，直接返回（兼容旧英文值）
 		if (source == null) return "-";
-		switch (source) {
-			case "ONLINE":
-			case "线上": return "线上";
-			case "OFFLINE":
-			case "线下": return "线下";
-			case "WALKIN":
-			case "现场": return "现场";
-			case "APP":
-			case "APP预约": return "APP预约";
-			default: return source;
-		}
+		return switch (source) {
+			case "ONLINE", "线上" -> "线上";
+			case "OFFLINE", "线下" -> "线下";
+			default -> source;
+		};
 	}
 }

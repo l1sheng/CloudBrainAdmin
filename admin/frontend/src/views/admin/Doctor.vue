@@ -138,10 +138,7 @@
                   :key="r.roleId"
                   :label="r.roleName"
                   :value="r.roleId"
-                >
-                  <div class="dept-option-main">{{ r.roleName }}</div>
-                  <div v-if="r.description" class="dept-option-sub">{{ r.description }}</div>
-                </el-option>
+                />
               </el-select>
             </el-form-item>
           </el-col>

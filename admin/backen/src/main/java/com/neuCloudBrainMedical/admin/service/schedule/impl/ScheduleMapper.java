@@ -12,13 +12,6 @@ import java.util.Map;
 @Component
 public class ScheduleMapper {
 
-	public ScheduleResponse toResponse(DoctorSchedule schedule,
-	                                    Map<Long, Doctor> doctors,
-	                                    Map<Long, Department> departments,
-	                                    Map<Long, SysUser> users) {
-		return toResponse(schedule, doctors, departments, users, null);
-	}
-
 	/**
 	 * 将 DoctorSchedule 转换为 ScheduleResponse。
 	 *

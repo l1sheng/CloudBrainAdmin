@@ -59,6 +59,11 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 		return toResponses(List.of(schedule)).get(0);
 	}
 
+	@Override
+	public ScheduleResponse toResponse(DoctorSchedule schedule) {
+		return toResponses(List.of(schedule)).get(0);
+	}
+
 	private List<ScheduleResponse> toResponses(List<DoctorSchedule> schedules) {
 		if (schedules.isEmpty()) {
 			return List.of();

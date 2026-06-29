@@ -59,7 +59,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 
 	@Override
 	public List<DoctorRoleOption> listDoctorRoles() {
-		return sysRoleRepository.findByRoleCodeStartingWithOrderByRoleId(DOCTOR_ROLE_PREFIX)
+		return sysRoleRepository.findByRoleCodeContainingOrderByRoleId(DOCTOR_ROLE_PREFIX)
 				.stream()
 				.map(r -> new DoctorRoleOption(r.getRoleId(), r.getRoleCode(), r.getRoleName(), r.getDescription()))
 				.toList();
@@ -208,7 +208,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (requestedRoleId != null) {
 			SysRole role = sysRoleRepository.findById(requestedRoleId)
 					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
-			if (role.getRoleCode() == null || !role.getRoleCode().startsWith(DOCTOR_ROLE_PREFIX)) {
+		if (role.getRoleCode() == null || !role.getRoleCode().contains(DOCTOR_ROLE_PREFIX)) {
 				throw new BusinessException(400, "必须选择医生权限角色");
 			}
 			return role.getRoleId();
@@ -219,7 +219,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 			return defaultRole.getRoleId();
 		}
 
-		List<SysRole> allDoctor = sysRoleRepository.findByRoleCodeStartingWithOrderByRoleId(DOCTOR_ROLE_PREFIX);
+		List<SysRole> allDoctor = sysRoleRepository.findByRoleCodeContainingOrderByRoleId(DOCTOR_ROLE_PREFIX);
 		if (allDoctor.isEmpty()) {
 			throw new BusinessException(500, "系统中尚未配置任何医生角色");
 		}
@@ -283,7 +283,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		if (req.getRoleId() != null && !req.getRoleId().equals(user.getRoleId())) {
 			SysRole role = sysRoleRepository.findById(req.getRoleId())
 					.orElseThrow(() -> new BusinessException(400, "角色不存在"));
-			if (role.getRoleCode() == null || !role.getRoleCode().startsWith(DOCTOR_ROLE_PREFIX)) {
+		if (role.getRoleCode() == null || !role.getRoleCode().contains(DOCTOR_ROLE_PREFIX)) {
 				throw new BusinessException(400, "必须选择医生权限角色");
 			}
 			user.setRoleId(req.getRoleId());

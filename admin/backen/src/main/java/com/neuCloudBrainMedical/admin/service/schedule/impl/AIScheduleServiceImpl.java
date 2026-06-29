@@ -9,7 +9,6 @@ import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleResponse;
 import com.neuCloudBrainMedical.admin.dto.schedule.SuggestionDetailResponse;
 import com.neuCloudBrainMedical.admin.entity.schedule.AiScheduleSuggestion;
 import com.neuCloudBrainMedical.admin.entity.schedule.AiScheduleSuggestionDetail;
-import com.neuCloudBrainMedical.admin.entity.department.Department;
 import com.neuCloudBrainMedical.admin.entity.doctor.Doctor;
 import com.neuCloudBrainMedical.admin.entity.schedule.DoctorSchedule;
 import com.neuCloudBrainMedical.admin.entity.SysUser;
@@ -17,17 +16,16 @@ import com.neuCloudBrainMedical.admin.exception.AIServiceException;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
 import com.neuCloudBrainMedical.admin.repository.schedule.AiScheduleSuggestionDetailRepository;
 import com.neuCloudBrainMedical.admin.repository.schedule.AiScheduleSuggestionRepository;
-import com.neuCloudBrainMedical.admin.repository.department.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.doctor.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.schedule.ScheduleRepository;
 import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.schedule.IAIScheduleService;
 import com.neuCloudBrainMedical.admin.service.schedule.IAISchedulingClient;
+import com.neuCloudBrainMedical.admin.service.schedule.IScheduleQueryService;
 import com.neuCloudBrainMedical.admin.util.ScheduleTimeSlotUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,30 +50,27 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	private final IAISchedulingClient aiSchedulingClient;
 	private final DoctorRepository doctorRepository;
 	private final SysUserRepository sysUserRepository;
-	private final DepartmentRepository departmentRepository;
 	private final ScheduleRepository scheduleRepository;
 	private final AiScheduleSuggestionRepository suggestionRepository;
 	private final AiScheduleSuggestionDetailRepository detailRepository;
-	private final ScheduleMapper scheduleMapper;
+	private final IScheduleQueryService queryService;
 	private final ObjectMapper objectMapper;
 
 	public AIScheduleServiceImpl(IAISchedulingClient aiSchedulingClient,
 			DoctorRepository doctorRepository,
 			SysUserRepository sysUserRepository,
-			DepartmentRepository departmentRepository,
 			ScheduleRepository scheduleRepository,
 			AiScheduleSuggestionRepository suggestionRepository,
 			AiScheduleSuggestionDetailRepository detailRepository,
-			ScheduleMapper scheduleMapper,
+			IScheduleQueryService queryService,
 			ObjectMapper objectMapper) {
 		this.aiSchedulingClient = aiSchedulingClient;
 		this.doctorRepository = doctorRepository;
 		this.sysUserRepository = sysUserRepository;
-		this.departmentRepository = departmentRepository;
 		this.scheduleRepository = scheduleRepository;
 		this.suggestionRepository = suggestionRepository;
 		this.detailRepository = detailRepository;
-		this.scheduleMapper = scheduleMapper;
+		this.queryService = queryService;
 		this.objectMapper = objectMapper;
 	}
 
@@ -257,14 +252,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	}
 
 	private ScheduleResponse toScheduleResponse(DoctorSchedule schedule) {
-		Doctor doctor = doctorRepository.findById(schedule.getDoctorId()).orElse(null);
-		Department department = departmentRepository.findById(schedule.getDeptId()).orElse(null);
-		// 医生姓名从 sys_user.real_name 取，避免 doctor 表冗余字段
-		SysUser user = doctor != null ? sysUserRepository.findById(doctor.getUserId()).orElse(null) : null;
-		return scheduleMapper.toResponse(schedule,
-				doctor == null ? Map.of() : Map.of(doctor.getDoctorId(), doctor),
-				department == null ? Map.of() : Map.of(department.getDeptId(), department),
-				user == null ? Map.of() : Map.of(user.getUserId(), user));
+		return queryService.toResponse(schedule);
 	}
 
 	private List<AiScheduleSuggestionDetail> parseDetails(String rawJson, Long suggestionId) {

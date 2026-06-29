@@ -4,53 +4,39 @@ import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleBatchCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleResponse;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleUpdateRequest;
-import com.neuCloudBrainMedical.admin.entity.department.Department;
 import com.neuCloudBrainMedical.admin.entity.doctor.Doctor;
 import com.neuCloudBrainMedical.admin.entity.schedule.DoctorSchedule;
-import com.neuCloudBrainMedical.admin.entity.SysUser;
 import com.neuCloudBrainMedical.admin.exception.BusinessException;
-import com.neuCloudBrainMedical.admin.repository.department.DepartmentRepository;
 import com.neuCloudBrainMedical.admin.repository.doctor.DoctorRepository;
 import com.neuCloudBrainMedical.admin.repository.schedule.ScheduleRepository;
-import com.neuCloudBrainMedical.admin.repository.SysUserRepository;
 import com.neuCloudBrainMedical.admin.service.schedule.IScheduleCommandService;
+import com.neuCloudBrainMedical.admin.service.schedule.IScheduleQueryService;
 import com.neuCloudBrainMedical.admin.util.ScheduleTimeSlotUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Service
 public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 
 	private static final String STATUS_ACTIVE = "可预约";
-	private static final String STATUS_CANCELLED = "停诊";
 	private static final String SOURCE_MANUAL = "MANUAL";
-
-	// defaultFeeByTitle 已移至 ScheduleTimeSlotUtils 共享
 
 	private final ScheduleRepository scheduleRepository;
 	private final DoctorRepository doctorRepository;
-	private final DepartmentRepository departmentRepository;
-	private final SysUserRepository sysUserRepository;
-	private final ScheduleMapper scheduleMapper;
+	private final IScheduleQueryService queryService;
 
 	public ScheduleCommandServiceImpl(ScheduleRepository scheduleRepository,
 			DoctorRepository doctorRepository,
-			DepartmentRepository departmentRepository,
-			SysUserRepository sysUserRepository,
-			ScheduleMapper scheduleMapper) {
+			IScheduleQueryService queryService) {
 		this.scheduleRepository = scheduleRepository;
 		this.doctorRepository = doctorRepository;
-		this.departmentRepository = departmentRepository;
-		this.sysUserRepository = sysUserRepository;
-		this.scheduleMapper = scheduleMapper;
+		this.queryService = queryService;
 	}
 
 	@Override
@@ -203,13 +189,7 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 	}
 
 	private ScheduleResponse toResponse(DoctorSchedule schedule) {
-		Doctor doctor = doctorRepository.findById(schedule.getDoctorId()).orElse(null);
-		Department department = departmentRepository.findById(schedule.getDeptId()).orElse(null);
-		SysUser user = doctor != null ? sysUserRepository.findById(doctor.getUserId()).orElse(null) : null;
-		return scheduleMapper.toResponse(schedule,
-				doctor == null ? Map.of() : Map.of(doctor.getDoctorId(), doctor),
-				department == null ? Map.of() : Map.of(department.getDeptId(), department),
-				user == null ? Map.of() : Map.of(user.getUserId(), user));
+		return queryService.toResponse(schedule);
 	}
 }
 

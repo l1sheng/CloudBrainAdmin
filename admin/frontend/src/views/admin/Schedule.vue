@@ -934,7 +934,8 @@ const displayTimeSlot = (slot) => {
   return slot || '-'
 }
 
-/** 根据职称返回默认挂号费（与后端 defaultFeeByTitle 保持一致） */
+// UI 提示用：后端为费用权威来源，此处仅用于新增排班时的输入框预填
+// 必须与后端 ScheduleTimeSlotUtils.defaultFeeByTitle() 保持一致
 const defaultFeeByTitle = (title) => {
   if (!title) return 15
   if (title.includes('主任医师')) return 50
@@ -1064,7 +1065,7 @@ function slotInfo(row, dateStr, slot) {
   return cur + '/' + total
 }
 
-const timeSlotLabelMap = { '上午': '上午', '下午': '下午', '夜间': '夜间' }
+const timeSlotLabelMap = { '上午': '上午', '下午': '下午', '夜间': '夜间' } // AI 结果弹窗使用
 
 function padZero(n) {
   return n < 10 ? '0' + n : '' + n
@@ -1373,33 +1374,6 @@ async function handleSubmit() {
     } else {
       const dates = formData.scheduleDates || []
       const slots = formData.timeSlots || []
-
-      // 冲突检测：同一医生、同一日期、同一时段 且 非已取消 的排班不能重复添加
-      const timeSlotLabel = { '上午': '上午', '下午': '下午', '夜间': '夜间' }
-      const conflicts = []
-      for (const item of rawList.value) {
-        if (item.doctorId !== formData.doctorId) continue
-        if (item.status === '停诊') continue
-        if (!dates.includes(item.scheduleDate)) continue
-        if (!slots.includes(item.timeSlot)) continue
-        conflicts.push(item)
-      }
-      if (conflicts.length > 0) {
-        const tips = conflicts
-          .map((c) => `  • ${c.scheduleDate} ${timeSlotLabel[c.timeSlot] || c.timeSlot}`)
-          .join('\n')
-        ElMessageBox.alert(
-          `该医生在以下时段已有排班，无法重复添加：\n\n${tips}`,
-          '排班时间冲突',
-          {
-            confirmButtonText: '知道了',
-            type: 'warning'
-          }
-        )
-        submitting.value = false
-        return
-      }
-
       const list = []
       for (const date of dates) {
         for (const slot of slots) {
@@ -1422,14 +1396,6 @@ async function handleSubmit() {
   } finally {
     submitting.value = false
   }
-}
-
-async function handleCancel(row) {
-  try {
-    await cancelSchedule(row.id)
-    ElMessage.success('已取消排班')
-    loadList()
-  } catch (e) {}
 }
 
 watch(
