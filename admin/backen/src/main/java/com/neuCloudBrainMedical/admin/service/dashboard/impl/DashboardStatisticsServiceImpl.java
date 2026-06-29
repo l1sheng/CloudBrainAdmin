@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @Service
 public class DashboardStatisticsServiceImpl implements IDashboardStatisticsService {
 
-	private static final List<String> AVAILABLE_SCHEDULE_STATUSES = List.of("1", "AVAILABLE");
+	private static final List<String> AVAILABLE_SCHEDULE_STATUSES = List.of("1", "可预约");
 	private static final Integer ENABLED_STATUS = 1;
 
 	private final RegistrationRepository registrationRepository;

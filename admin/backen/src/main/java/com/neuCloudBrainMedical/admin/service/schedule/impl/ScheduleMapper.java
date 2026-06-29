@@ -65,15 +65,13 @@ public class ScheduleMapper {
 		response.setDepartmentId(schedule.getDeptId());
 		response.setDepartmentName(department != null ? department.getDeptName() : "");
 		response.setScheduleDate(schedule.getWorkDate());
+		// timePeriod 直接使用数据库中的中文值（上午/下午/夜间）
 		response.setTimeSlot(schedule.getTimePeriod());
 		response.setMaxAppointments(schedule.getTotalQuota());
 		response.setCurrentAppointments(realCount);
 		response.setSource(schedule.getSource());
+		response.setRegistrationFee(schedule.getRegistrationFee());
 		response.setStatus(schedule.getStatus());
 		return response;
 	}
 }
-
-
-
-

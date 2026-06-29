@@ -87,7 +87,7 @@ public class DefaultAISchedulingClient implements IAISchedulingClient {
 				你是医院管理员端的 AI 排班助手。
 				你只能返回 JSON 数组，不要返回 Markdown、解释文字或代码块。
 				字段必须为：doctorId, doctorName, date, timeSlot, maxAppointments, reason。
-				timeSlot 只能使用 MORNING、AFTERNOON、EVENING。
+				timeSlot 只能使用 中文值：上午、下午、夜间。
 				date 必须使用 yyyy-MM-dd。
 				maxAppointments 必须是正整数。
 				""";
@@ -126,7 +126,7 @@ public class DefaultAISchedulingClient implements IAISchedulingClient {
 				    "doctorId": 1,
 				    "doctorName": "D20260001",
 				    "date": "2026-06-23",
-				    "timeSlot": "MORNING",
+				    "timeSlot": "上午",
 				    "maxAppointments": 30,
 				    "reason": "上午需求较高，医生专长匹配"
 				  }

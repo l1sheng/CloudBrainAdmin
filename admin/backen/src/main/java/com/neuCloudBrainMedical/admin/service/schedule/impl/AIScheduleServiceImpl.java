@@ -42,7 +42,10 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	private static final String STATUS_PENDING = "PENDING";
 	private static final String STATUS_ACCEPTED = "ACCEPTED";
 	private static final String STATUS_REJECTED = "REJECTED";
-	private static final String STATUS_AVAILABLE = "AVAILABLE";
+	private static final String SUGGESTION_PENDING = "待确认";
+	private static final String SUGGESTION_ACCEPTED = "已确认";
+	private static final String SUGGESTION_REJECTED = "已忽略";
+	private static final String STATUS_AVAILABLE = "可预约";
 	private static final String SOURCE_AI = "AI_SUGGESTED";
 	private static final int ENABLED_DOCTOR_STATUS = 1;
 
@@ -159,7 +162,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 	}
 
 	private AiScheduleSuggestion findPendingSuggestion(Long suggestionId) {
-		return suggestionRepository.findBySuggestionIdAndStatus(suggestionId, STATUS_PENDING)
+		return suggestionRepository.findBySuggestionIdAndStatus(suggestionId, SUGGESTION_PENDING)
 				.orElseThrow(() -> new BusinessException(404, "AI 排班建议不存在或已处理"));
 	}
 
@@ -169,7 +172,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 		suggestion.setWorkDate(request.getStartDate());
 		suggestion.setTimePeriod("AI_RANGE");
 		suggestion.setSuggestionReason(buildSuggestionSummary(details));
-		suggestion.setStatus(STATUS_PENDING);
+		suggestion.setStatus(SUGGESTION_PENDING);
 		suggestion.setCreatedAt(LocalDateTime.now());
 		return suggestionRepository.save(suggestion);
 	}
@@ -207,7 +210,11 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 		schedule.setTimePeriod(detail.getTimeSlot());
 		schedule.setTotalQuota(detail.getMaxAppointments());
 		schedule.setRemainQuota(detail.getMaxAppointments());
-		schedule.setRegistrationFee(BigDecimal.ZERO);
+		schedule.setStartTime(ScheduleTimeSlotUtils.defaultStartTime(detail.getTimeSlot()));
+		schedule.setEndTime(ScheduleTimeSlotUtils.defaultEndTime(detail.getTimeSlot()));
+		// 根据医生职称设置默认挂号费
+		Doctor scheduleDoctor = doctorRepository.findById(detail.getDoctorId()).orElse(null);
+		schedule.setRegistrationFee(ScheduleTimeSlotUtils.defaultFeeByTitle(scheduleDoctor != null ? scheduleDoctor.getTitle() : null));
 		schedule.setStatus(STATUS_AVAILABLE);
 		schedule.setSource(SOURCE_AI);
 		schedule.setCreatedAt(now);
@@ -244,7 +251,7 @@ public class AIScheduleServiceImpl implements IAIScheduleService {
 		}
 		List<AiScheduleSuggestionDetail> acceptedDetails = detailRepository.findBySuggestionIdAndStatus(
 				suggestion.getSuggestionId(), STATUS_ACCEPTED);
-		suggestion.setStatus(acceptedDetails.isEmpty() ? STATUS_REJECTED : STATUS_ACCEPTED);
+		suggestion.setStatus(acceptedDetails.isEmpty() ? SUGGESTION_REJECTED : SUGGESTION_ACCEPTED);
 		suggestion.setConfirmedAt(LocalDateTime.now());
 		suggestionRepository.save(suggestion);
 	}

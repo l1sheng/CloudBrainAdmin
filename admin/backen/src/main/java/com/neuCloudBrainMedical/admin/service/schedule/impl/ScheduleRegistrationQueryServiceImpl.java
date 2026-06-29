@@ -78,14 +78,10 @@ public class ScheduleRegistrationQueryServiceImpl implements IScheduleRegistrati
 	private String mapFeeStatus(String feeStatus) {
 		if (feeStatus == null) return "-";
 		switch (feeStatus) {
-			case "PAID":
-			case "已支付":
-			case "已缴费": return "已缴费";
-			case "UNPAID":
-			case "未支付":
-			case "未缴费": return "未缴费";
-			case "REFUNDED":
-			case "已退款": return "已退款";
+			case "待支付": return "待支付";
+			case "已支付": return "已支付";
+			case "部分退费": return "部分退费";
+			case "已退费": return "已退费";
 			default: return feeStatus;
 		}
 	}
@@ -93,17 +89,12 @@ public class ScheduleRegistrationQueryServiceImpl implements IScheduleRegistrati
 	private String mapRegistrationStatus(String status) {
 		if (status == null) return "-";
 		switch (status) {
-			case "PENDING":
-			case "待就诊":
-			case "REGISTERED":
-			case "已挂号": return "待就诊";
-			case "VISITED":
-			case "已就诊":
+			case "待支付": return "待支付";
+			case "待接诊": return "待接诊";
+			case "接诊中": return "接诊中";
 			case "已完成": return "已完成";
-			case "CANCELLED":
 			case "已取消": return "已取消";
-			case "NOSHOW":
-			case "已失约": return "已失约";
+			case "爽约": return "爽约";
 			default: return status;
 		}
 	}

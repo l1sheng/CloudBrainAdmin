@@ -29,9 +29,11 @@ import java.util.Set;
 @Service
 public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 
-	private static final String STATUS_ACTIVE = "AVAILABLE";
-	private static final String STATUS_CANCELLED = "CANCELLED";
+	private static final String STATUS_ACTIVE = "可预约";
+	private static final String STATUS_CANCELLED = "停诊";
 	private static final String SOURCE_MANUAL = "MANUAL";
+
+	// defaultFeeByTitle 已移至 ScheduleTimeSlotUtils 共享
 
 	private final ScheduleRepository scheduleRepository;
 	private final DoctorRepository doctorRepository;
@@ -79,6 +81,8 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 			if (!timeSlot.equals(schedule.getTimePeriod())) {
 				validateConflict(schedule.getDoctorId(), schedule.getWorkDate(), timeSlot);
 				schedule.setTimePeriod(timeSlot);
+				schedule.setStartTime(ScheduleTimeSlotUtils.defaultStartTime(timeSlot));
+				schedule.setEndTime(ScheduleTimeSlotUtils.defaultEndTime(timeSlot));
 			}
 		}
 
@@ -108,6 +112,9 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 		}
 		schedule.setRemainQuota(newMax - newCurrent);
 
+		if (request.getRegistrationFee() != null) {
+			schedule.setRegistrationFee(request.getRegistrationFee());
+		}
 		if (request.getStatus() != null) {
 			schedule.setStatus(request.getStatus());
 		}
@@ -135,7 +142,11 @@ public class ScheduleCommandServiceImpl implements IScheduleCommandService {
 		schedule.setTimePeriod(request.getTimeSlot());
 		schedule.setTotalQuota(request.getMaxAppointments());
 		schedule.setRemainQuota(request.getMaxAppointments());
-		schedule.setRegistrationFee(BigDecimal.ZERO);
+		schedule.setStartTime(ScheduleTimeSlotUtils.defaultStartTime(request.getTimeSlot()));
+		schedule.setEndTime(ScheduleTimeSlotUtils.defaultEndTime(request.getTimeSlot()));
+		// 根据医生职称设置默认挂号费
+		Doctor doctor = doctorRepository.findById(request.getDoctorId()).orElse(null);
+		schedule.setRegistrationFee(ScheduleTimeSlotUtils.defaultFeeByTitle(doctor != null ? doctor.getTitle() : null));
 		schedule.setStatus(STATUS_ACTIVE);
 		schedule.setSource(source);
 		schedule.setCreatedAt(now);

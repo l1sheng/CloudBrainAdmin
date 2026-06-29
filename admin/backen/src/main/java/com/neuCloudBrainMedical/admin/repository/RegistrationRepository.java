@@ -36,7 +36,7 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 	@Query("""
 			SELECT COUNT(r) FROM Registration r
 			WHERE r.doctorId = :doctorId
-			  AND r.status NOT IN ('已取消', '已退号', '已完成', '已结束')
+			  AND r.status NOT IN ('已取消', '已完成', '爽约')
 			""")
 	long countPendingRegistrations(@Param("doctorId") Long doctorId);
 }

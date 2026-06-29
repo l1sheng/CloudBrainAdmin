@@ -179,7 +179,7 @@
               <template #default="{ row }">
                 <div class="slot-cell">
                   <template
-                    v-for="slot in ['MORNING', 'AFTERNOON', 'EVENING']"
+                    v-for="slot in ['上午', '下午', '夜间']"
                     :key="slot"
                   >
                     <div
@@ -287,7 +287,7 @@
             <template #default="{ row }">
               <el-tag
                 size="small"
-                :type="row.feeStatus === '已缴费' ? 'success' : row.feeStatus === '未缴费' ? 'warning' : 'info'"
+:type="row.feeStatus === '已支付' ? 'success' : row.feeStatus === '待支付' ? 'warning' : 'info'"
               >{{ row.feeStatus || '-' }}</el-tag>
             </template>
           </el-table-column>
@@ -295,7 +295,7 @@
             <template #default="{ row }">
               <el-tag
                 size="small"
-                :type="row.status === '已完成' ? 'success' : row.status === '已取消' ? 'danger' : row.status === '已失约' ? 'warning' : 'info'"
+:type="row.status === '已完成' ? 'success' : row.status === '已取消' ? 'danger' : row.status === '爽约' ? 'warning' : 'info'"
               >{{ row.status || '-' }}</el-tag>
             </template>
           </el-table-column>
@@ -443,17 +443,32 @@
             @change="onTimeSlotChange"
             style="width: 100%"
           >
-            <el-option label="上午" value="MORNING" :class="{ 'option-conflict': isSlotAllOccupied('MORNING') }" />
-            <el-option label="下午" value="AFTERNOON" :class="{ 'option-conflict': isSlotAllOccupied('AFTERNOON') }" />
-            <el-option label="晚间" value="EVENING" :class="{ 'option-conflict': isSlotAllOccupied('EVENING') }" />
+            <el-option label="上午" value="上午" :class="{ 'option-conflict': isSlotAllOccupied('上午') }" />
+            <el-option label="下午" value="下午" :class="{ 'option-conflict': isSlotAllOccupied('下午') }" />
+            <el-option label="夜间" value="夜间" :class="{ 'option-conflict': isSlotAllOccupied('夜间') }" />
           </el-select>
         </el-form-item>
         <el-form-item v-else label="时段" prop="timeSlot">
           <el-select v-model="formData.timeSlot" placeholder="请选择时段" style="width: 100%">
-            <el-option label="上午" value="MORNING" />
-            <el-option label="下午" value="AFTERNOON" />
-            <el-option label="晚间" value="EVENING" />
+            <el-option label="上午" value="上午" />
+            <el-option label="下午" value="下午" />
+            <el-option label="夜间" value="夜间" />
           </el-select>
+        </el-form-item>
+
+        <el-form-item label="挂号费（元）">
+          <el-input-number
+            v-model.number="formData.registrationFee"
+            :min="0"
+            :max="9999"
+            :step="5"
+            :precision="2"
+            controls-position="right"
+            style="width: 100%"
+          />
+          <div v-if="!isEdit && selectedDoctor" style="color: #909399; font-size: 12px; margin-top: 4px;">
+            默认挂号费（{{ selectedDoctor.title || '普通' }}）：¥{{ defaultFeeByTitle(selectedDoctor.title) }}
+          </div>
         </el-form-item>
 
         <el-form-item label="最大挂号数" prop="maxAppointments">
@@ -480,9 +495,9 @@
 
         <el-form-item v-if="isEdit" label="状态" prop="status">
           <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%" @change="onStatusChange">
-            <el-option label="可用" value="AVAILABLE" />
-            <el-option label="已满" value="FULL" />
-            <el-option label="已取消" value="CANCELLED" />
+            <el-option label="可预约" value="可预约" />
+            <el-option label="约满" value="约满" />
+            <el-option label="停诊" value="停诊" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -697,7 +712,8 @@ const formData = reactive({
   timeSlot: '',
   maxAppointments: 20,
   currentAppointments: 0,
-  status: 'AVAILABLE'
+  registrationFee: 0,
+  status: '可预约'
 })
 
 const formRules = {
@@ -738,6 +754,15 @@ const aiForm = reactive({
 const aiSuggestion = ref(null) // { suggestionId, details: [...] }
 
 const editingDoctorInfo = ref(null)
+
+// 选择医生时自动填充默认挂号费
+watch(() => formData.doctorId, (newDoctorId) => {
+  if (!newDoctorId || isEdit.value) return
+  const doc = doctors.value.find((d) => d.doctorId === newDoctorId)
+  if (doc) {
+    formData.registrationFee = defaultFeeByTitle(doc.title)
+  }
+})
 
 const selectedDoctor = computed(() => {
   if (!formData.doctorId) return null
@@ -905,12 +930,18 @@ const titleChipClass = (title) => {
 }
 
 const displayTimeSlot = (slot) => {
-  switch (slot) {
-    case 'MORNING': return '上午'
-    case 'AFTERNOON': return '下午'
-    case 'EVENING': return '晚间'
-    default: return slot || '-'
-  }
+  // 时段值已是中文，直接返回
+  return slot || '-'
+}
+
+/** 根据职称返回默认挂号费（与后端 defaultFeeByTitle 保持一致） */
+const defaultFeeByTitle = (title) => {
+  if (!title) return 15
+  if (title.includes('主任医师')) return 50
+  if (title.includes('副主任医师')) return 25
+  if (title.includes('主治医师')) return 15
+  if (title.includes('住院医师')) return 10
+  return 15
 }
 
 const formatDoctorLabel = (doc) => {
@@ -1012,7 +1043,7 @@ const filterDepartment = (keyword) => {
 function slotClass(row, dateStr, slot) {
   const item = getScheduleItem(row, dateStr, slot)
   if (!item) return ''
-  if (item.status === 'CANCELLED') return 'slot-cancelled'
+  if (item.status === '停诊') return 'slot-cancelled'
   const total = Number(item.maxAppointments) || 0
   const cur = Number(item.currentAppointments) || 0
   if (cur >= total) return 'slot-full'
@@ -1027,13 +1058,13 @@ function getScheduleItem(row, dateStr, slot) {
 function slotInfo(row, dateStr, slot) {
   const item = getScheduleItem(row, dateStr, slot)
   if (!item) return ''
-  if (item.status === 'CANCELLED') return '已取消'
+  if (item.status === '停诊') return '停诊'
   const total = Number(item.maxAppointments) || 0
   const cur = Number(item.currentAppointments) || 0
   return cur + '/' + total
 }
 
-const timeSlotLabelMap = { MORNING: '上午', AFTERNOON: '下午', EVENING: '晚间' }
+const timeSlotLabelMap = { '上午': '上午', '下午': '下午', '夜间': '夜间' }
 
 function padZero(n) {
   return n < 10 ? '0' + n : '' + n
@@ -1050,13 +1081,13 @@ function isSlotOccupied(dateStr, slot) {
       item.doctorId === formData.doctorId &&
       item.scheduleDate === dateStr &&
       item.timeSlot === slot &&
-      item.status !== 'CANCELLED'
+      item.status !== '停诊'
   )
 }
 
 // 该日期早中晚全已排班 → 完全不可选
 function isDateConflict(dateStr) {
-  return ['MORNING', 'AFTERNOON', 'EVENING'].every((slot) =>
+  return ['上午', '下午', '夜间'].every((slot) =>
     isSlotOccupied(dateStr, slot)
   )
 }
@@ -1070,7 +1101,7 @@ function isSlotAllOccupied(slot) {
       (item) =>
         item.doctorId === formData.doctorId &&
         item.timeSlot === slot &&
-        item.status !== 'CANCELLED'
+        item.status !== '停诊'
     )
   }
   return dates.every((date) => isSlotOccupied(date, slot))
@@ -1130,6 +1161,7 @@ function openCreateForDoctor(row) {
   formData.departmentId = row.departmentId
   loadDoctors(row.departmentId)
   formData.doctorId = row.doctorId
+  formData.registrationFee = defaultFeeByTitle(row.title)
   dialogVisible.value = true
 }
 
@@ -1139,6 +1171,7 @@ function openCreateForSlot(row, dateStr, slot) {
   formData.departmentId = row.departmentId
   loadDoctors(row.departmentId)
   formData.doctorId = row.doctorId
+  formData.registrationFee = defaultFeeByTitle(row.title)
   formData.scheduleDates = [dateStr]
   formData.timeSlots = [slot]
   dialogVisible.value = true
@@ -1215,7 +1248,8 @@ function resetForm() {
   formData.timeSlot = ''
   formData.maxAppointments = 20
   formData.currentAppointments = 0
-  formData.status = 'AVAILABLE'
+  formData.registrationFee = 0
+  formData.status = '可预约'
   editingDoctorInfo.value = null
   if (scheduleFormRef.value) scheduleFormRef.value.clearValidate()
 }
@@ -1240,7 +1274,7 @@ function formatDateTime(val) {
 }
 
 function statusLabel(status) {
-  const map = { AVAILABLE: '可挂号', FULL: '已满', CANCELLED: '已取消' }
+  const map = { '可预约': '可预约', '约满': '约满', '停诊': '停诊', '已过期': '已过期' }
   return map[status] || (status || '-')
 }
 
@@ -1284,13 +1318,14 @@ function openEditDialog(item) {
   formData.timeSlot = item.timeSlot
   formData.maxAppointments = item.maxAppointments
   formData.currentAppointments = Number(item.currentAppointments) || 0
-  formData.status = item.status || 'AVAILABLE'
+  formData.registrationFee = item.registrationFee || defaultFeeByTitle(item.title)
+  formData.status = item.status || '可预约'
   loadDoctors(item.departmentId)
   dialogVisible.value = true
 }
 
 function onStatusChange(val) {
-  if (val === 'FULL') {
+  if (val === '约满') {
     formData.currentAppointments = formData.maxAppointments
   }
 }
@@ -1331,6 +1366,7 @@ async function handleSubmit() {
         timeSlot: formData.timeSlot,
         maxAppointments: formData.maxAppointments,
         currentAppointments: formData.currentAppointments,
+        registrationFee: formData.registrationFee,
         status: formData.status
       })
       ElMessage.success('编辑成功')
@@ -1339,11 +1375,11 @@ async function handleSubmit() {
       const slots = formData.timeSlots || []
 
       // 冲突检测：同一医生、同一日期、同一时段 且 非已取消 的排班不能重复添加
-      const timeSlotLabel = { MORNING: '上午', AFTERNOON: '下午', EVENING: '晚间' }
+      const timeSlotLabel = { '上午': '上午', '下午': '下午', '夜间': '夜间' }
       const conflicts = []
       for (const item of rawList.value) {
         if (item.doctorId !== formData.doctorId) continue
-        if (item.status === 'CANCELLED') continue
+        if (item.status === '停诊') continue
         if (!dates.includes(item.scheduleDate)) continue
         if (!slots.includes(item.timeSlot)) continue
         conflicts.push(item)

@@ -1,5 +1,6 @@
 ﻿package com.neuCloudBrainMedical.admin.dto.schedule;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class ScheduleResponse {
@@ -18,6 +19,7 @@ public class ScheduleResponse {
 	private Integer maxAppointments;
 	private Integer currentAppointments;
 	private String source;
+	private BigDecimal registrationFee;
 	private String status;
 
 	public Long getId() {
@@ -130,6 +132,14 @@ public class ScheduleResponse {
 
 	public void setSource(String source) {
 		this.source = source;
+	}
+
+	public BigDecimal getRegistrationFee() {
+		return registrationFee;
+	}
+
+	public void setRegistrationFee(BigDecimal registrationFee) {
+		this.registrationFee = registrationFee;
 	}
 
 	public String getStatus() {
