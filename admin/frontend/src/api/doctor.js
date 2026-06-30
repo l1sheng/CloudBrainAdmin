@@ -24,6 +24,10 @@ export function toggleDoctorStatus(id, force) {
   return request({ url: '/admin/doctor/' + id + '/toggle-status', method: 'patch', params: { force: force ? 'true' : 'false' } })
 }
 
+export function deleteDoctor(id) {
+  return request({ url: '/admin/doctor/' + id, method: 'delete' })
+}
+
 export function listDepartments() {
   return request({ url: '/admin/department', method: 'get' })
 }

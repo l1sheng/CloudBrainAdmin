@@ -118,9 +118,9 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="科室" prop="departmentId">
-              <el-select v-model="formData.departmentId" placeholder="请选择科室" filterable :filter-method="filterDepartment" style="width: 100%">
+              <el-select v-model="formData.departmentId" placeholder="请选择科室" filterable style="width: 100%">
                 <template v-if="hasMultipleDeptTypes">
-                  <el-option-group v-for="group in filteredDepartmentsByType" :key="group.type" :label="group.type">
+                  <el-option-group v-for="group in formDeptOptionsByType" :key="group.type" :label="group.type">
                     <el-option v-for="dept in group.items" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                       <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                       <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
@@ -128,7 +128,7 @@
                   </el-option-group>
                 </template>
                 <template v-else>
-                  <el-option v-for="dept in filteredDepartments" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
+                  <el-option v-for="dept in formDeptOptions" :key="dept.id" :label="formatDeptLabel(dept)" :value="dept.id">
                     <div class="dept-option-main">{{ formatDeptLabel(dept) }}</div>
                     <div v-if="formatDeptSubLabel(dept)" class="dept-option-sub">{{ formatDeptSubLabel(dept) }}</div>
                   </el-option>
@@ -148,7 +148,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="职称" prop="title">
-              <el-select v-model="formData.title" placeholder="请选择职称" filterable allow-create style="width: 100%">
+              <el-select v-model="formData.title" placeholder="请选择职称" filterable style="width: 100%">
                 <el-option v-for="t in titleOptions" :key="t" :label="t" :value="t" />
               </el-select>
             </el-form-item>
@@ -176,6 +176,7 @@
         </el-row>
       </el-form>
       <template #footer>
+        <el-button v-if="dialogMode === 'edit'" type="danger" :loading="deleting" @click="handleDelete">删除</el-button>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitForm">确定</el-button>
       </template>
@@ -209,16 +210,17 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Download, RefreshLeft } from '@element-plus/icons-vue'
-import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments, listDoctorRoles } from '@/api/doctor'
+import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments, listDoctorRoles, deleteDoctor } from '@/api/doctor'
 
 const loading = ref(false)
 const submitting = ref(false)
+const deleting = ref(false)
 const total = ref(0)
 const tableData = ref([])
 const departments = ref([])
 const doctorRoles = ref([])
 const deptKeyword = ref('')
-const titleOptions = ['主任医师', '副主任医师', '主治医师', '住院医师', '护士']
+const titleOptions = ['住院医师', '主治医师', '副主任医师', '主任医师']
 
 // 角色 code → 登录账号前缀映射
 const rolePrefixMap = {
@@ -287,6 +289,30 @@ const filteredDepartmentsByType = computed(() => {
 
 const filterDepartment = (keyword) => { deptKeyword.value = keyword || '' }
 
+// 编辑弹窗：过滤掉有子科室的顶级科室，只保留叶子科室和独立科室（扁平列表）
+const formDeptOptions = computed(() => {
+  const list = departments.value || []
+  if (!list.length) return []
+  // 找出所有被引用为 parentId 的科室ID（即有子科室的顶级科室）
+  const parentIds = new Set(list.filter(d => d.parentId != null).map(d => d.parentId))
+  // 只保留不被其他科室引用为 parentId 的科室（叶子科室 + 独立科室）
+  return list.filter(d => !parentIds.has(d.id))
+})
+
+// 编辑弹窗：按类型分组的叶子科室
+const formDeptOptionsByType = computed(() => {
+  const list = formDeptOptions.value
+  if (!list.length) return []
+  const groups = new Map()
+  for (const d of list) {
+    const type = d.departmentType || '其他'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(d)
+  }
+  const types = Array.from(groups.keys()).sort()
+  return types.map((type) => ({ type, items: groups.get(type) }))
+})
+
 const queryForm = reactive({ departmentId: undefined, keyword: '', title: '', status: undefined, pageNum: 1, pageSize: 10 })
 
 const dialogVisible = ref(false)
@@ -319,7 +345,7 @@ const formRules = {
   departmentId: [{ required: true, message: '请选择科室', trigger: 'change' }],
   phone: [{ validator: (_r, v, cb) => (!v || /^1[3-9]\d{9}$/.test(v)) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' }],
   email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
-  title: [{ required: true, message: '请选择 / 输入职称', trigger: 'change' }]
+  title: [{ required: true, message: '请选择职称', trigger: 'change' }]
 }
 
 const detailVisible = ref(false)
@@ -459,6 +485,24 @@ async function handleToggle(row) {
 }
 
 function viewDetail(row) { currentDetail.value = row; detailVisible.value = true }
+
+async function handleDelete() {
+  if (!formData.doctorId) return
+  try {
+    await ElMessageBox.confirm(
+      '确认删除该医生账号？删除后将无法恢复，且关联的排班和挂号记录将受影响。',
+      '删除医生',
+      { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning', confirmButtonClass: 'el-button--danger' }
+    )
+  } catch { return }
+  deleting.value = true
+  try {
+    await deleteDoctor(formData.doctorId)
+    ElMessage.success('医生已删除')
+    dialogVisible.value = false
+    loadList()
+  } catch { /* request.js 已处理 */ } finally { deleting.value = false }
+}
 
 // 详情弹窗关闭时清除行选中状态
 function onDetailClose() {

@@ -4,6 +4,8 @@ import com.neuCloudBrainMedical.admin.dto.department.DepartmentResponse;
 import com.neuCloudBrainMedical.admin.dto.department.DepartmentTreeNode;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 科室查询接口（只读）。
@@ -26,8 +28,13 @@ public interface IDepartmentQueryService {
 
 	/** 获取某科室的所有祖先节点（根在前，当前节点最后），用于 "面包屑"。 */
 	List<DepartmentResponse> getAncestors(Long id);
+
+	/**
+	 * 批量根据 ID 查询科室信息（返回 deptId -> DepartmentResponse 的 Map）。
+	 * 供跨模块 Service 调用，避免直接依赖 DepartmentMapper。
+	 */
+	Map<Long, DepartmentResponse> findDepartmentResponsesByIds(Set<Long> deptIds);
+
+	/** 统计状态为"启用"的科室总数。 */
+	long countEnabledDepartments();
 }
-
-
-
-

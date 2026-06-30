@@ -295,7 +295,7 @@
             <template #default="{ row }">
               <el-tag
                 size="small"
-:type="row.status === '已完成' ? 'success' : row.status === '已取消' ? 'danger' : row.status === '爽约' ? 'warning' : 'info'"
+:type="row.status === '已完成' ? 'success' : row.status === '已取消' ? 'danger' : row.status === '爽约' ? 'warning' : row.status === '已过期' ? 'warning' : 'info'"
               >{{ row.status || '-' }}</el-tag>
             </template>
           </el-table-column>
@@ -498,6 +498,7 @@
             <el-option label="可预约" value="可预约" />
             <el-option label="约满" value="约满" />
             <el-option label="停诊" value="停诊" />
+            <el-option label="已过期" value="已过期" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -635,13 +636,13 @@
             <el-button
               size="small"
               type="success"
-              :disabled="row.status === 'ACCEPTED'"
+              :disabled="row.status !== 'PENDING'"
               @click="onAcceptDetail(row)"
             >采纳</el-button>
             <el-button
               size="small"
               type="danger"
-              :disabled="row.status === 'REJECTED'"
+              :disabled="row.status !== 'PENDING'"
               @click="onRejectDetail(row)"
             >拒绝</el-button>
           </template>
@@ -1045,6 +1046,7 @@ function slotClass(row, dateStr, slot) {
   const item = getScheduleItem(row, dateStr, slot)
   if (!item) return ''
   if (item.status === '停诊') return 'slot-cancelled'
+  if (item.status === '已过期') return 'slot-expired'
   const total = Number(item.maxAppointments) || 0
   const cur = Number(item.currentAppointments) || 0
   if (cur >= total) return 'slot-full'
@@ -1773,6 +1775,12 @@ async function onRejectDetail(row) {
 .slot-item.slot-cancelled {
   color: #f56c6c;
   background: #fef0f0;
+}
+
+.slot-item.slot-expired {
+  color: #909399;
+  background: #f5f7fa;
+  opacity: 0.6;
 }
 
 .slot-empty {

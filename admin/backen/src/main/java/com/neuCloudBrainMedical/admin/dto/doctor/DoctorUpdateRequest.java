@@ -33,7 +33,7 @@ public class DoctorUpdateRequest {
 
 	private Long departmentId;
 
-	@Size(max = 50, message = "职称长度不能超过50")
+	@Pattern(regexp = "^(住院医师|主治医师|副主任医师|主任医师)$", message = "职称只能是住院医师、主治医师、副主任医师、主任医师")
 	private String title;
 
 	@Size(max = 30, message = "医生类型长度不能超过30")

@@ -7,7 +7,6 @@ import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleRegistrationResponse;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleUpdateRequest;
 import com.neuCloudBrainMedical.admin.service.schedule.IScheduleCommandService;
 import com.neuCloudBrainMedical.admin.service.schedule.IScheduleQueryService;
-import com.neuCloudBrainMedical.admin.service.schedule.IScheduleRegistrationQueryService;
 import com.neuCloudBrainMedical.admin.util.Result;
 import java.time.LocalDate;
 import java.util.List;
@@ -34,14 +33,11 @@ public class ScheduleController {
 
 	private final IScheduleQueryService scheduleQueryService;
 	private final IScheduleCommandService scheduleCommandService;
-	private final IScheduleRegistrationQueryService scheduleRegistrationQueryService;
 
 	public ScheduleController(IScheduleQueryService scheduleQueryService,
-			IScheduleCommandService scheduleCommandService,
-			IScheduleRegistrationQueryService scheduleRegistrationQueryService) {
+			IScheduleCommandService scheduleCommandService) {
 		this.scheduleQueryService = scheduleQueryService;
 		this.scheduleCommandService = scheduleCommandService;
-		this.scheduleRegistrationQueryService = scheduleRegistrationQueryService;
 	}
 
 	// ========== 查询 ==========
@@ -61,7 +57,7 @@ public class ScheduleController {
 
 	@GetMapping("/{id}/registrations")
 	public Result<List<ScheduleRegistrationResponse>> listRegistrations(@PathVariable Long id) {
-		return Result.success(scheduleRegistrationQueryService.listByScheduleId(id));
+		return Result.success(scheduleQueryService.listRegistrationsByScheduleId(id));
 	}
 
 	// ========== 命令 ==========

@@ -1,10 +1,10 @@
 ﻿package com.neuCloudBrainMedical.admin.controller.doctor;
 
-import com.neuCloudBrainMedical.admin.dto.doctor.BatchImportResult;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorDisableCheckResponse;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorOptionDTO;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorResponse;
+import com.neuCloudBrainMedical.admin.dto.doctor.DoctorRoleOption;
 import com.neuCloudBrainMedical.admin.dto.doctor.DoctorUpdateRequest;
 import com.neuCloudBrainMedical.admin.dto.PageResponse;
 import com.neuCloudBrainMedical.admin.service.doctor.IDoctorCommandService;
@@ -41,8 +41,8 @@ public class DoctorAdminController {
 	// ==================== 读操作 ====================
 
 	@GetMapping("/roles")
-	public Result<List<com.neuCloudBrainMedical.admin.dto.doctor.DoctorRoleOption>> listDoctorRoles() {
-		return Result.success(doctorCommandService.listDoctorRoles());
+	public Result<List<DoctorRoleOption>> listDoctorRoles() {
+		return Result.success(doctorQueryService.listDoctorRoles());
 	}
 
 	@GetMapping("/list")
@@ -95,11 +95,6 @@ public class DoctorAdminController {
 	public Result<DoctorResponse> toggleStatus(@PathVariable Long id,
 	                                           @RequestParam(defaultValue = "false") boolean force) {
 		return Result.success(doctorCommandService.toggleStatus(id, force));
-	}
-
-	@PostMapping("/batch-import")
-	public Result<BatchImportResult> batchImport(@RequestBody List<DoctorCreateRequest> list) {
-		return Result.success(doctorCommandService.batchImport(list));
 	}
 
 	@DeleteMapping("/{id}")

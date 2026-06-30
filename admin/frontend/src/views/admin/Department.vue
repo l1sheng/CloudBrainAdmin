@@ -493,10 +493,42 @@ function filterTreeNodes(nodes, kw) {
 }
 const filteredTreeData = computed(() => filterTreeNodes(treeData.value, treeKeyword.value))
 
-// 列表筛选（关键字 + 类型）
+// 获取选中顶级节点的子科室ID集合（含递归）
+const selectedChildIds = computed(() => {
+  if (!selectedId.value) return null
+  // 在树中查找选中节点，判断是否有子节点
+  const findNode = (nodes) => {
+    if (!nodes) return null
+    for (const n of nodes) {
+      if (n.id === selectedId.value) return n
+      const found = findNode(n.children)
+      if (found) return found
+    }
+    return null
+  }
+  const node = findNode(treeData.value)
+  if (!node || !node.children || node.children.length === 0) return null
+  // 收集选中节点自身及其所有子节点ID
+  const ids = new Set()
+  ids.add(selectedId.value)
+  const collect = (nodes) => {
+    if (!nodes) return
+    for (const n of nodes) {
+      ids.add(n.id)
+      collect(n.children)
+    }
+  }
+  collect(node.children)
+  return ids
+})
+
+// 列表筛选（关键字 + 类型 + 树选中过滤）
 const filteredTableData = computed(() => {
   const kw = (keyword.value || '').toLowerCase()
+  const childIds = selectedChildIds.value
   return (tableData.value || []).filter((d) => {
+    // 如果选中了顶级科室，只显示其子科室
+    if (childIds && !childIds.has(d.id)) return false
     const nameMatch = !kw || (d.name || '').toLowerCase().includes(kw) || (d.code || '').toLowerCase().includes(kw)
     const typeMatch = !typeFilter.value || d.departmentType === typeFilter.value
     return nameMatch && typeMatch
@@ -555,6 +587,12 @@ function refreshAll() {
 
 function handleTreeNodeClick(data) {
   selectedId.value = data.id
+  // 顶级科室（有子科室）：不加载详情，显示子科室列表
+  if (data.children && data.children.length > 0) {
+    currentDetail.value = null
+    return
+  }
+  // 叶子科室：加载详情
   loadDetail(data.id)
 }
 
@@ -573,7 +611,6 @@ async function loadDetail(id) {
 }
 
 function viewDetail(row) {
-  selectedId.value = row.id
   loadDetail(row.id)
 }
 
@@ -597,8 +634,10 @@ function openCreateDialog() {
   dialogVisible.value = true
 }
 
+let editingId = null
 function openEditDialog(row) {
   dialogMode.value = 'edit'
+  editingId = row.id
   formData.name = row.name
   formData.code = row.code || ''
   formData.parentId = row.parentId ?? null
@@ -634,7 +673,7 @@ async function submitForm() {
       })
       ElMessage.success('新增科室成功')
     } else {
-      await updateDepartment(currentDetail.value.id, {
+      await updateDepartment(editingId, {
         name: formData.name.trim(),
         code: formData.code || undefined,
         parentId: formData.parentId ?? undefined,
