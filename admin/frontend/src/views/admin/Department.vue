@@ -85,10 +85,11 @@
                     @input="loadList"
                   />
                 </div>
-                <div class="list-toolbar-right">
+                <div class="list-toolbar-right" style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 13px; color: #606266; white-space: nowrap;">类型筛选：</span>
                   <el-dropdown @command="handleTypeFilter">
-                    <el-button>
-                      类型筛选
+                  <el-button>
+                      {{ typeFilter || '全部' }}
                       <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                     </el-button>
                     <template #dropdown>
@@ -269,6 +270,117 @@
                     </div>
                   </el-col>
                 </el-row>
+
+                <!-- 科室医生 -->
+                <div class="dept-doctors-card">
+                  <div class="dept-doctors-header">
+                    <div class="dept-doctors-title">
+                      <el-icon><User /></el-icon>
+                      <span>科室医生</span>
+                      <el-tag size="small" type="primary" effect="plain">{{ deptDoctors.length }} 人</el-tag>
+                    </div>
+                  </div>
+
+                  <el-table
+                    :data="deptDoctors"
+                    stripe
+                    style="width: 100%"
+                    empty-text="暂无医生数据"
+                    v-loading="loadingDoctors"
+                    max-height="420"
+                    @row-click="openDoctorEditDialog"
+                  >
+                    <el-table-column prop="doctorNo" label="工号" width="110" />
+                    <el-table-column prop="doctorName" label="姓名" width="100" />
+                    <el-table-column prop="title" label="职称" width="100" />
+                    <el-table-column prop="doctorType" label="医生类型" width="90" />
+                    <el-table-column prop="phone" label="手机" width="130" />
+                    <el-table-column prop="email" label="邮箱" show-overflow-tooltip min-width="170" />
+                    <el-table-column prop="specialty" label="专长" show-overflow-tooltip min-width="150" />
+                    <el-table-column prop="hireDate" label="入职日期" width="110" />
+                    <el-table-column label="状态" width="80" align="center">
+                      <template #default="{ row }">
+                        <el-tag
+                          size="small"
+                          :type="row.status === 1 ? 'success' : 'info'"
+                          effect="light"
+                        >
+                          {{ row.status === 1 ? '启用' : '停用' }}
+                        </el-tag>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </div>
+
+                <!-- 编辑医生弹窗 -->
+                <el-dialog
+                  v-model="doctorEditVisible"
+                  title="编辑医生"
+                  width="640px"
+                  destroy-on-close
+                  top="8vh"
+                >
+                  <el-form
+                    ref="doctorEditFormRef"
+                    :model="doctorEditData"
+                    label-width="90px"
+                  >
+                    <el-row :gutter="16">
+                      <el-col :span="12">
+                        <el-form-item label="姓名">
+                          <el-input v-model="doctorEditData.name" maxlength="50" />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="职称">
+                          <el-select v-model="doctorEditData.title" placeholder="请选择" style="width: 100%" filterable>
+                            <el-option v-for="t in doctorTitleOptions" :key="t" :label="t" :value="t" />
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="医生类型">
+                          <el-select v-model="doctorEditData.doctorType" placeholder="请选择" style="width: 100%" filterable allow-create>
+                            <el-option label="主治" value="主治" />
+                            <el-option label="副主治" value="副主治" />
+                            <el-option label="住院" value="住院" />
+                            <el-option label="实习" value="实习" />
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="手机">
+                          <el-input v-model="doctorEditData.phone" maxlength="20" />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="邮箱">
+                          <el-input v-model="doctorEditData.email" maxlength="100" />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="状态">
+                          <el-switch
+                            v-model="doctorEditData.status"
+                            :active-value="1"
+                            :inactive-value="0"
+                            active-text="启用"
+                            inactive-text="停用"
+                          />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="24">
+                        <el-form-item label="专长">
+                          <el-input v-model="doctorEditData.specialty" type="textarea" :rows="2" maxlength="255" />
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                  </el-form>
+                  <template #footer>
+                    <el-button @click="doctorEditVisible = false">取消</el-button>
+                    <el-button type="primary" :loading="doctorEditSubmitting" @click="submitDoctorEdit">确定</el-button>
+                  </template>
+                </el-dialog>
               </div>
             </div>
           </transition>
@@ -391,7 +503,8 @@ import {
   OfficeBuilding,
   Plus,
   Refresh,
-  Search
+  Search,
+  User
 } from '@element-plus/icons-vue'
 import {
   createDepartment,
@@ -402,6 +515,7 @@ import {
   toggleDepartmentStatus,
   updateDepartment
 } from '@/api/department'
+import { listDoctors, updateDoctor } from '@/api/doctor'
 
 // ---------- 数据 ----------
 const treeData = ref([])
@@ -411,6 +525,22 @@ const selectedId = ref(null)
 const keyword = ref('')
 const treeKeyword = ref('')
 const typeFilter = ref('')
+const deptDoctors = ref([])
+const loadingDoctors = ref(false)
+const doctorEditVisible = ref(false)
+const doctorEditFormRef = ref(null)
+const doctorEditSubmitting = ref(false)
+const doctorTitleOptions = ['住院医师', '主治医师', '副主任医师', '主任医师']
+const doctorEditData = reactive({
+  id: null,
+  name: '',
+  title: '',
+  doctorType: '',
+  phone: '',
+  email: '',
+  specialty: '',
+  status: 1
+})
 
 // ---------- 弹窗 ----------
 const dialogVisible = ref(false)
@@ -493,10 +623,10 @@ function filterTreeNodes(nodes, kw) {
 }
 const filteredTreeData = computed(() => filterTreeNodes(treeData.value, treeKeyword.value))
 
-// 获取选中顶级节点的子科室ID集合（含递归）
+// 获取选中顶级节点及其所有子科室ID集合（含递归）
 const selectedChildIds = computed(() => {
   if (!selectedId.value) return null
-  // 在树中查找选中节点，判断是否有子节点
+  // 在树中查找选中节点
   const findNode = (nodes) => {
     if (!nodes) return null
     for (const n of nodes) {
@@ -507,8 +637,10 @@ const selectedChildIds = computed(() => {
     return null
   }
   const node = findNode(treeData.value)
-  if (!node || !node.children || node.children.length === 0) return null
-  // 收集选中节点自身及其所有子节点ID
+  if (!node) return null
+  // 没有子节点的叶子节点不触发过滤
+  if (!node.children || node.children.length === 0) return null
+  // 收集选中节点自身 + 所有子节点ID
   const ids = new Set()
   ids.add(selectedId.value)
   const collect = (nodes) => {
@@ -522,11 +654,29 @@ const selectedChildIds = computed(() => {
   return ids
 })
 
-// 列表筛选（关键字 + 类型 + 树选中过滤）
+// 列表筛选：永远不显示有子科室的顶级科室
+const parentDeptIds = computed(() => {
+  const ids = new Set()
+  const walk = (nodes) => {
+    if (!nodes) return
+    for (const n of nodes) {
+      if (n.children && n.children.length > 0) {
+        ids.add(n.id)
+        walk(n.children)
+      }
+    }
+  }
+  walk(treeData.value)
+  return ids
+})
+
 const filteredTableData = computed(() => {
   const kw = (keyword.value || '').toLowerCase()
+  const parentIds = parentDeptIds.value
   const childIds = selectedChildIds.value
   return (tableData.value || []).filter((d) => {
+    // 永远不显示有子科室的顶级科室
+    if (parentIds.has(d.id)) return false
     // 如果选中了顶级科室，只显示其子科室
     if (childIds && !childIds.has(d.id)) return false
     const nameMatch = !kw || (d.name || '').toLowerCase().includes(kw) || (d.code || '').toLowerCase().includes(kw)
@@ -604,19 +754,79 @@ async function loadDetail(id) {
   try {
     const detail = await getDepartmentDetail(id)
     currentDetail.value = detail
+    loadDeptDoctors(id)
   } catch (e) {
     currentDetail.value = null
     selectedId.value = null
+    deptDoctors.value = []
+  }
+}
+
+async function loadDeptDoctors(deptId) {
+  try {
+    loadingDoctors.value = true
+    const data = await listDoctors({ departmentId: deptId })
+    if (Array.isArray(data)) {
+      deptDoctors.value = data
+    } else if (data && Array.isArray(data.rows)) {
+      deptDoctors.value = data.rows
+    } else if (data && Array.isArray(data.list)) {
+      deptDoctors.value = data.list
+    } else {
+      deptDoctors.value = []
+    }
+  } catch (e) {
+    deptDoctors.value = []
+  } finally {
+    loadingDoctors.value = false
   }
 }
 
 function viewDetail(row) {
+  selectedId.value = row.id
   loadDetail(row.id)
+}
+
+function openDoctorEditDialog(row) {
+  if (!row) return
+  doctorEditData.id = row.id
+  doctorEditData.name = row.doctorName || row.name || ''
+  doctorEditData.title = row.title || ''
+  doctorEditData.doctorType = row.doctorType || ''
+  doctorEditData.phone = row.phone || ''
+  doctorEditData.email = row.email || ''
+  doctorEditData.specialty = row.specialty || ''
+  doctorEditData.status = row.status ?? 1
+  doctorEditVisible.value = true
+}
+
+async function submitDoctorEdit() {
+  if (!doctorEditData.id) return
+  try {
+    doctorEditSubmitting.value = true
+    await updateDoctor(doctorEditData.id, {
+      name: doctorEditData.name.trim(),
+      title: doctorEditData.title,
+      doctorType: doctorEditData.doctorType,
+      phone: doctorEditData.phone,
+      email: doctorEditData.email,
+      specialty: doctorEditData.specialty,
+      status: doctorEditData.status
+    })
+    ElMessage.success('保存成功')
+    doctorEditVisible.value = false
+    loadDeptDoctors(selectedId.value)
+  } catch (e) {
+    // interceptor 已提示
+  } finally {
+    doctorEditSubmitting.value = false
+  }
 }
 
 function switchToList() {
   selectedId.value = null
   currentDetail.value = null
+  deptDoctors.value = []
   loadList()
 }
 
@@ -1228,5 +1438,32 @@ onMounted(() => {
   font-size: 13px;
   color: #606266;
   line-height: 1.8;
+}
+
+/* ========== 科室医生 ========== */
+.dept-doctors-card {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.dept-doctors-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.dept-doctors-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.dept-doctors-title .el-icon {
+  color: #409eff;
 }
 </style>
