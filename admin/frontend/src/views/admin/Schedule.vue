@@ -675,6 +675,10 @@ import {
   rejectSuggestionDetail,
   updateSchedule
 } from '@/api/schedule'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isClinicAdmin = computed(() => userStore.isClinicAdmin)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -841,13 +845,21 @@ const matrixRows = computed(() => {
   const rowsMap = new Map()
   const schedulesByDoctor = new Map()
 
-  // 前端筛选：按职称、医生类型（与后端 doctor 表精确匹配）
+  // 前端筛选：按职称、医生类型、科室类型（门诊医生管理员仅显示门诊）
   let filtered = rawList.value
   if (queryForm.title) {
     filtered = filtered.filter((item) => item.title === queryForm.title)
   }
   if (queryForm.doctorType) {
     filtered = filtered.filter((item) => item.doctorType === queryForm.doctorType)
+  }
+  // 门诊医生管理员：只保留门诊科室的排班
+  if (isClinicAdmin.value) {
+    const deptMap = new Map((departments.value || []).map((d) => [String(d.id), d.departmentType]))
+    filtered = filtered.filter((item) => {
+      const type = deptMap.get(String(item.departmentId))
+      return type === '门诊'
+    })
   }
 
   for (const item of filtered) {
@@ -911,15 +923,19 @@ function formatShort(d) {
 
 const doctorTypeTag = (type) => {
   if (!type) return 'info'
-  if (type.includes('主任')) return 'warning'
-  if (type.includes('主治')) return ''
+  if (type.includes('门诊')) return 'success'
+  if (type.includes('检验') || type.includes('检查')) return 'warning'
+  if (type.includes('药房')) return 'danger'
+  if (type.includes('挂号')) return ''
   return 'info'
 }
 
 const doctorTypeChipClass = (type) => {
   if (!type) return 'doctor-type-other'
-  if (type.includes('主任')) return 'doctor-type-chief'
-  if (type.includes('主治')) return 'doctor-type-chief'
+  if (type.includes('门诊')) return 'doctor-type-chief'
+  if (type.includes('检验') || type.includes('检查')) return 'doctor-type-other'
+  if (type.includes('药房')) return 'doctor-type-other'
+  if (type.includes('挂号')) return 'doctor-type-other'
   return 'doctor-type-other'
 }
 
@@ -1017,7 +1033,12 @@ const matchesDeptKeyword = (dept) => {
 
 // 过滤后的科室列表（扁平化）
 const filteredDepartments = computed(() => {
-  return (departments.value || []).filter(matchesDeptKeyword)
+  const list = (departments.value || []).filter(matchesDeptKeyword)
+  // 门诊医生管理员：只显示门诊类型的科室
+  if (isClinicAdmin.value) {
+    return list.filter((d) => d.departmentType === '门诊')
+  }
+  return list
 })
 
 // 过滤后的科室分组

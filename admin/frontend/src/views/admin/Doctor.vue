@@ -39,6 +39,11 @@
             <el-option v-for="t in titleOptions" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
+        <el-form-item label="医生类型">
+          <el-select v-model="queryForm.doctorType" placeholder="请选择" clearable style="width: 130px" @change="onSearch">
+            <el-option v-for="opt in doctorTypeOptions" :key="opt.code" :label="opt.label" :value="opt.code" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="queryForm.status" placeholder="请选择" clearable style="width: 120px" @change="onSearch">
             <el-option label="启用" :value="1" />
@@ -155,11 +160,13 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="医生类型">
-              <el-select v-model="formData.doctorType" placeholder="请选择" filterable allow-create style="width: 100%">
-                <el-option label="主治" value="主治" />
-                <el-option label="副主治" value="副主治" />
-                <el-option label="住院" value="住院" />
-                <el-option label="实习" value="实习" />
+              <el-select v-model="formData.doctorType" placeholder="请选择" filterable style="width: 100%">
+                <el-option
+                  v-for="opt in doctorTypeOptions"
+                  :key="opt.code"
+                  :label="opt.label"
+                  :value="opt.code"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -211,6 +218,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Download, RefreshLeft } from '@element-plus/icons-vue'
 import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments, listDoctorRoles, deleteDoctor } from '@/api/doctor'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isClinicAdmin = computed(() => userStore.isClinicAdmin)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -220,7 +231,24 @@ const tableData = ref([])
 const departments = ref([])
 const doctorRoles = ref([])
 const deptKeyword = ref('')
-const titleOptions = ['住院医师', '主治医师', '副主任医师', '主任医师']
+const titleOptions = ref(['住院医师', '主治医师', '副主任医师', '主任医师'])
+
+// doctorType 英文 code ↔ 中文 label 映射（与后端 doctorTypeToChinese 保持一致）
+// 数据库存英文，返回给前端的是中文，前端下拉框 value 用英文、label 用中文
+const DOCTOR_TYPE_MAP = {
+  OUTPATIENT: '门诊医生',
+  LAB: '检验医生',
+  EXAM: '检查医生',
+  PHARMACY: '药房医生',
+  REGISTRATION: '挂号医生'
+}
+const DOCTOR_TYPE_REVERSE_MAP = Object.fromEntries(
+  Object.entries(DOCTOR_TYPE_MAP).map(([code, label]) => [label, code])
+)
+const doctorTypeOptions = Object.keys(DOCTOR_TYPE_MAP).map((code) => ({
+  code,
+  label: DOCTOR_TYPE_MAP[code]
+}))
 
 // 角色 code → 登录账号前缀映射
 const rolePrefixMap = {
@@ -272,7 +300,14 @@ const matchesDeptKeyword = (dept) => {
   return haystack.includes(kw)
 }
 
-const filteredDepartments = computed(() => (departments.value || []).filter(matchesDeptKeyword))
+const filteredDepartments = computed(() => {
+  const list = (departments.value || []).filter(matchesDeptKeyword)
+  // 门诊医生管理员：只显示门诊类型的科室
+  if (isClinicAdmin.value) {
+    return list.filter((d) => d.departmentType === '门诊')
+  }
+  return list
+})
 
 const filteredDepartmentsByType = computed(() => {
   const list = filteredDepartments.value
@@ -289,17 +324,35 @@ const filteredDepartmentsByType = computed(() => {
 
 const filterDepartment = (keyword) => { deptKeyword.value = keyword || '' }
 
-// 编辑弹窗：过滤掉有子科室的顶级科室，只保留叶子科室和独立科室（扁平列表）
-const formDeptOptions = computed(() => {
-  const list = departments.value || []
-  if (!list.length) return []
-  // 找出所有被引用为 parentId 的科室ID（即有子科室的顶级科室）
-  const parentIds = new Set(list.filter(d => d.parentId != null).map(d => d.parentId))
-  // 只保留不被其他科室引用为 parentId 的科室（叶子科室 + 独立科室）
-  return list.filter(d => !parentIds.has(d.id))
+// 判断选中角色是否为管理员（roleCode 包含 ADMIN）
+const isSelectedRoleAdmin = computed(() => {
+  if (!formData.roleId) return false
+  const role = doctorRoles.value.find(r => r.roleId === formData.roleId)
+  return !!role && role.roleCode && role.roleCode.toUpperCase().includes('ADMIN')
 })
 
-// 编辑弹窗：按类型分组的叶子科室
+// 编辑弹窗：科室下拉选项
+// - 若选中角色为管理员：只显示顶级科室（parentId == null）
+// - 否则：只显示叶子科室（没有子科室的科室）
+// - 门诊医生管理员：始终只显示门诊类型的科室
+const formDeptOptions = computed(() => {
+  let list = departments.value || []
+  if (!list.length) return []
+  // 门诊医生管理员：只显示门诊类型的科室
+  if (isClinicAdmin.value) {
+    list = list.filter((d) => d.departmentType === '门诊')
+  }
+  if (isSelectedRoleAdmin.value) {
+    // 管理员：只显示顶级科室
+    return list.filter(d => d.parentId == null)
+  } else {
+    // 非管理员：只显示叶子科室（没有子科室的科室）
+    const parentIds = new Set(list.filter(d => d.parentId != null).map(d => d.parentId))
+    return list.filter(d => !parentIds.has(d.id))
+  }
+})
+
+// 编辑弹窗：按类型分组的科室
 const formDeptOptionsByType = computed(() => {
   const list = formDeptOptions.value
   if (!list.length) return []
@@ -313,29 +366,40 @@ const formDeptOptionsByType = computed(() => {
   return types.map((type) => ({ type, items: groups.get(type) }))
 })
 
-const queryForm = reactive({ departmentId: undefined, keyword: '', title: '', status: undefined, pageNum: 1, pageSize: 10 })
+const queryForm = reactive({ departmentId: undefined, keyword: '', title: '', doctorType: '', status: undefined, pageNum: 1, pageSize: 10 })
 
 const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const formRef = ref(null)
 const formData = reactive({
   doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
-  departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: '',
+  departmentId: undefined, title: '', doctorType: '', specialty: '', hireDate: '',
   loginUsername: '', loginPassword: '', roleId: undefined
 })
 
-// 监听角色变化，自动生成工号和登录账号提示（仅新增模式）
+// 监听角色变化
+// - 新增模式：自动生成工号和登录账号提示
+// - 角色切换（新增或编辑）：若原科室在新过滤条件下不可选，则清空科室
 watch(() => formData.roleId, (newRoleId) => {
-  if (dialogMode.value !== 'create' || !newRoleId) return
-  const role = doctorRoles.value.find(r => r.roleId === newRoleId)
-  if (role) {
-    const prefix = rolePrefixMap[role.roleCode] || 'DOC'
-    const now = new Date()
-    const datePart = String(now.getFullYear()) +
-      String(now.getMonth() + 1).padStart(2, '0') +
-      String(now.getDate()).padStart(2, '0')
-    formData.doctorNo = 'D' + datePart + '?'
-    formData.loginUsername = prefix + datePart + '?'
+  // 新增模式：自动生成工号和登录账号提示
+  if (dialogMode.value === 'create' && newRoleId) {
+    const role = doctorRoles.value.find(r => r.roleId === newRoleId)
+    if (role) {
+      const prefix = rolePrefixMap[role.roleCode] || 'DOC'
+      const now = new Date()
+      const datePart = String(now.getFullYear()) +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0')
+      formData.doctorNo = 'D' + datePart + '?'
+      formData.loginUsername = prefix + datePart + '?'
+    }
+  }
+  // 角色切换：若当前已选科室不在新过滤列表中，清空科室
+  if (newRoleId && formData.departmentId != null) {
+    const availableIds = new Set(formDeptOptions.value.map(d => d.id))
+    if (!availableIds.has(formData.departmentId)) {
+      formData.departmentId = undefined
+    }
   }
 })
 
@@ -384,6 +448,33 @@ async function loadList() {
     })
     tableData.value = result?.list || []
     total.value = result?.total || 0
+
+    // doctorType 前端筛选（后端接口暂不支持，临时在前端过滤）
+    if (queryForm.doctorType) {
+      const cnType = DOCTOR_TYPE_MAP[queryForm.doctorType]
+      if (cnType) {
+        tableData.value = tableData.value.filter((d) => d.doctorType === cnType)
+        total.value = tableData.value.length
+      }
+    }
+
+    // 门诊医生管理员：仅显示门诊科室下的门诊医生
+    if (isClinicAdmin.value) {
+      const clinicDeptIds = new Set(
+        (departments.value || []).filter((d) => d.departmentType === '门诊').map((d) => d.id)
+      )
+      tableData.value = tableData.value.filter((d) =>
+        clinicDeptIds.has(d.departmentId) && d.doctorType === '门诊医生'
+      )
+      total.value = tableData.value.length
+    }
+
+    // 从返回结果动态提取 title 的去重集合（doctorType 已由前端字典维护，不需提取）
+    const currentTitles = new Set(titleOptions.value)
+    for (const d of (result?.list || [])) {
+      if (d.title) currentTitles.add(d.title)
+    }
+    titleOptions.value = Array.from(currentTitles)
   } catch {
     tableData.value = []
     total.value = 0
@@ -395,14 +486,14 @@ async function loadList() {
 function onSearch() { queryForm.pageNum = 1; loadList() }
 
 function onReset() {
-  Object.assign(queryForm, { departmentId: undefined, keyword: '', title: '', status: undefined, pageNum: 1 })
+  Object.assign(queryForm, { departmentId: undefined, keyword: '', title: '', doctorType: '', status: undefined, pageNum: 1 })
   loadList()
 }
 
 function resetFormData() {
   Object.assign(formData, {
     doctorId: undefined, name: '', doctorNo: '', phone: '', email: '',
-    departmentId: undefined, title: '', doctorType: '主治', specialty: '', hireDate: '',
+    departmentId: undefined, title: '', doctorType: '', specialty: '', hireDate: '',
     loginUsername: '', loginPassword: '', roleId: undefined
   })
 }
@@ -415,7 +506,9 @@ function openEditDialog(row) {
   Object.assign(formData, {
     doctorId: row.doctorId, name: row.doctorName || '', doctorNo: row.doctorNo || '',
     phone: row.phone || '', email: row.email || '',
-    departmentId: row.departmentId, title: row.title || '', doctorType: row.doctorType || '主治',
+    departmentId: row.departmentId, title: row.title || '',
+    // 后端返回中文（如"门诊医生"），需反向映射为英文 code（如"OUTPATIENT"）
+    doctorType: row.doctorType ? DOCTOR_TYPE_REVERSE_MAP[row.doctorType] || '' : '',
     specialty: row.specialty || '', hireDate: row.hireDate || '',
     loginUsername: row.loginUsername || '', loginPassword: '', roleId: row.roleId
   })
@@ -432,7 +525,7 @@ async function submitForm() {
       name: formData.name?.trim(),
       phone: formData.phone?.trim() || null, email: formData.email?.trim() || null,
       departmentId: formData.departmentId, title: formData.title,
-      doctorType: formData.doctorType || '主治', specialty: formData.specialty?.trim() || null,
+      doctorType: formData.doctorType, specialty: formData.specialty?.trim() || null,
       hireDate: formData.hireDate || null,
       loginPassword: formData.loginPassword?.trim() || null,
       roleId: formData.roleId || null

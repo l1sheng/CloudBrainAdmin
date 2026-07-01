@@ -87,21 +87,19 @@
                 </div>
                 <div class="list-toolbar-right" style="display: flex; align-items: center; gap: 8px;">
                   <span style="font-size: 13px; color: #606266; white-space: nowrap;">类型筛选：</span>
-                  <el-dropdown @command="handleTypeFilter">
-                  <el-button>
-                      {{ typeFilter || '全部' }}
-                      <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                  <el-dropdown @command="handleTypeFilter" :disabled="isClinicAdmin">
+                  <el-button :disabled="isClinicAdmin">
+                      {{ isClinicAdmin ? '门诊' : (typeFilter ? deptTypeCodeToCn(typeFilter) : '全部') }}
+                      <el-icon v-if="!isClinicAdmin" class="el-icon--right"><ArrowDown /></el-icon>
                     </el-button>
                     <template #dropdown>
                       <el-dropdown-menu>
                         <el-dropdown-item command="">全部</el-dropdown-item>
                         <el-dropdown-item
-                          v-for="t in departmentTypeOptions"
-                          :key="t"
-                          :command="t"
-                        >
-                          {{ t }}
-                        </el-dropdown-item>
+                          v-for="opt in departmentTypeOptions"
+                          :key="opt.code"
+                          :command="opt.code"
+                        >{{ opt.label }}</el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
                   </el-dropdown>
@@ -340,11 +338,13 @@
                       </el-col>
                       <el-col :span="12">
                         <el-form-item label="医生类型">
-                          <el-select v-model="doctorEditData.doctorType" placeholder="请选择" style="width: 100%" filterable allow-create>
-                            <el-option label="主治" value="主治" />
-                            <el-option label="副主治" value="副主治" />
-                            <el-option label="住院" value="住院" />
-                            <el-option label="实习" value="实习" />
+                          <el-select v-model="doctorEditData.doctorType" placeholder="请选择" style="width: 100%" filterable>
+                            <el-option
+                              v-for="opt in doctorTypeOptions"
+                              :key="opt.code"
+                              :label="opt.label"
+                              :value="opt.code"
+                            />
                           </el-select>
                         </el-form-item>
                       </el-col>
@@ -431,12 +431,17 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="科室类型" prop="departmentType">
-              <el-select v-model="formData.departmentType" placeholder="请选择" style="width: 100%">
+              <el-select
+                v-model="formData.departmentType"
+                placeholder="请选择"
+                style="width: 100%"
+                :disabled="isClinicAdmin"
+              >
                 <el-option
-                  v-for="t in departmentTypeOptions"
-                  :key="t"
-                  :label="t"
-                  :value="t"
+                  v-for="opt in (isClinicAdmin ? [{ code: 'OUTPATIENT', label: '门诊' }] : departmentTypeOptions)"
+                  :key="opt.code"
+                  :label="opt.label"
+                  :value="opt.code"
                 />
               </el-select>
             </el-form-item>
@@ -516,8 +521,37 @@ import {
   updateDepartment
 } from '@/api/department'
 import { listDoctors, updateDoctor } from '@/api/doctor'
+import { useUserStore } from '@/stores/user'
 
-// ---------- 数据 ----------
+const userStore = useUserStore()
+
+// ---------- 权限 ----------
+// 门诊医生管理员：只能操作门诊相关科室
+const isClinicAdmin = computed(() => userStore.isClinicAdmin)
+
+// ---------- 科室类型字典（英文 code ↔ 中文展示）----------
+// 数据库存英文，后端返回时转换为中文
+const DEPARTMENT_TYPE_MAP = {
+  OUTPATIENT: '门诊',
+  LAB: '检验',
+  EXAM: '检查',
+  PHARMACY: '药房',
+  BILLING: '收费'
+}
+const DEPARTMENT_TYPE_REVERSE_MAP = Object.fromEntries(
+  Object.entries(DEPARTMENT_TYPE_MAP).map(([code, label]) => [label, code])
+)
+const departmentTypeOptions = Object.keys(DEPARTMENT_TYPE_MAP).map((code) => ({
+  code,
+  label: DEPARTMENT_TYPE_MAP[code]
+}))
+
+// 工具函数：中文 → 英文 code
+function deptTypeCnToCode(cn) { return DEPARTMENT_TYPE_REVERSE_MAP[cn] || '' }
+// 工具函数：英文 code → 中文
+function deptTypeCodeToCn(code) { return DEPARTMENT_TYPE_MAP[code] || code || '' }
+
+// 数据 ----------
 const treeData = ref([])
 const tableData = ref([])
 const currentDetail = ref(null)
@@ -531,6 +565,23 @@ const doctorEditVisible = ref(false)
 const doctorEditFormRef = ref(null)
 const doctorEditSubmitting = ref(false)
 const doctorTitleOptions = ['住院医师', '主治医师', '副主任医师', '主任医师']
+// 医生类型字典（英文 code ↔ 中文展示）
+const DOCTOR_TYPE_MAP = {
+  OUTPATIENT: '门诊医生',
+  LAB: '检验医生',
+  EXAM: '检查医生',
+  PHARMACY: '药房医生',
+  REGISTRATION: '挂号医生'
+}
+const DOCTOR_TYPE_REVERSE_MAP = Object.fromEntries(
+  Object.entries(DOCTOR_TYPE_MAP).map(([code, label]) => [label, code])
+)
+const doctorTypeOptions = Object.keys(DOCTOR_TYPE_MAP).map((code) => ({
+  code,
+  label: DOCTOR_TYPE_MAP[code]
+}))
+// 工具函数：中文 → 英文 code
+function doctorTypeCnToCode(cn) { return DOCTOR_TYPE_REVERSE_MAP[cn] || '' }
 const doctorEditData = reactive({
   id: null,
   name: '',
@@ -551,7 +602,7 @@ const formData = reactive({
   name: '',
   code: '',
   parentId: null,
-  departmentType: '门诊',
+  departmentType: 'OUTPATIENT',
   floor: '',
   phone: '',
   sortOrder: 0,
@@ -594,32 +645,23 @@ const totalTreeCount = computed(() => {
   return count
 })
 
-const departmentTypeOptions = computed(() => {
-  const set = new Set()
-  for (const d of tableData.value || []) {
-    if (d.departmentType) set.add(d.departmentType)
-  }
-  if (set.size === 0) set.add('门诊')
-  return Array.from(set)
-})
-
-// 按关键字过滤树节点（保留父节点）
+// 按关键字过滤树节点（保留父节点）；门诊医生管理员额外按类型过滤
 function filterTreeNodes(nodes, kw) {
-  if (!kw) return nodes
-  const lower = kw.toLowerCase()
+  const lower = (kw || '').toLowerCase()
   const walk = (list) => {
     const result = []
     for (const n of list) {
-      const nameMatch = (n.name || '').toLowerCase().includes(lower)
-      const codeMatch = (n.code || '').toLowerCase().includes(lower)
+      const nameMatch = !lower || (n.name || '').toLowerCase().includes(lower) || (n.code || '').toLowerCase().includes(lower)
+      // treeData 中的 departmentType 是中文，按中文 '门诊' 匹配
+      const typeMatch = !isClinicAdmin.value || n.departmentType === '门诊'
       const children = n.children && n.children.length > 0 ? walk(n.children) : []
-      if (nameMatch || codeMatch || children.length > 0) {
+      if ((nameMatch || children.length > 0) && (typeMatch || children.length > 0)) {
         result.push({ ...n, children })
       }
     }
     return result
   }
-  return walk(nodes)
+  return walk(nodes || [])
 }
 const filteredTreeData = computed(() => filterTreeNodes(treeData.value, treeKeyword.value))
 
@@ -675,17 +717,19 @@ const filteredTableData = computed(() => {
   const parentIds = parentDeptIds.value
   const childIds = selectedChildIds.value
   return (tableData.value || []).filter((d) => {
-    // 永远不显示有子科室的顶级科室
     if (parentIds.has(d.id)) return false
-    // 如果选中了顶级科室，只显示其子科室
     if (childIds && !childIds.has(d.id)) return false
     const nameMatch = !kw || (d.name || '').toLowerCase().includes(kw) || (d.code || '').toLowerCase().includes(kw)
-    const typeMatch = !typeFilter.value || d.departmentType === typeFilter.value
+    // typeFilter 存英文 code，d.departmentType 是中文，需要转换后比对
+    // 门诊医生管理员：强制 '门诊' 类型
+    const effectiveCnType = isClinicAdmin.value ? '门诊' : (typeFilter.value ? deptTypeCodeToCn(typeFilter.value) : '')
+    const typeMatch = !effectiveCnType || d.departmentType === effectiveCnType
     return nameMatch && typeMatch
   })
 })
 
 function handleTypeFilter(cmd) {
+  if (isClinicAdmin.value) return
   typeFilter.value = cmd
 }
 
@@ -792,7 +836,7 @@ function openDoctorEditDialog(row) {
   doctorEditData.id = row.id
   doctorEditData.name = row.doctorName || row.name || ''
   doctorEditData.title = row.title || ''
-  doctorEditData.doctorType = row.doctorType || ''
+  doctorEditData.doctorType = doctorTypeCnToCode(row.doctorType) || ''
   doctorEditData.phone = row.phone || ''
   doctorEditData.email = row.email || ''
   doctorEditData.specialty = row.specialty || ''
@@ -835,7 +879,7 @@ function openCreateDialog() {
   formData.name = ''
   formData.code = ''
   formData.parentId = null
-  formData.departmentType = '门诊'
+  formData.departmentType = 'OUTPATIENT'
   formData.floor = ''
   formData.phone = ''
   formData.sortOrder = 0
@@ -851,7 +895,8 @@ function openEditDialog(row) {
   formData.name = row.name
   formData.code = row.code || ''
   formData.parentId = row.parentId ?? null
-  formData.departmentType = row.departmentType || '门诊'
+  // row.departmentType 是后端返回的中文（如 '门诊'），需转成英文 code
+  formData.departmentType = deptTypeCnToCode(row.departmentType) || 'OUTPATIENT'
   formData.floor = row.floor || ''
   formData.phone = row.phone || ''
   formData.sortOrder = row.sortOrder ?? 0

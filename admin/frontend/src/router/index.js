@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
   {
@@ -22,25 +23,25 @@ const routes = [
         path: 'department',
         name: 'Department',
         component: () => import('@/views/admin/Department.vue'),
-        meta: { title: '科室管理', requiresAuth: true }
+        meta: { title: '科室管理', requiresAuth: true, allowClinic: true }
       },
       {
         path: 'doctor',
         name: 'Doctor',
         component: () => import('@/views/admin/Doctor.vue'),
-        meta: { title: '医生管理', requiresAuth: true }
+        meta: { title: '医生管理', requiresAuth: true, allowClinic: true }
       },
       {
         path: 'role',
         name: 'Role',
         component: () => import('@/views/admin/Role.vue'),
-        meta: { title: '角色管理', requiresAuth: true }
+        meta: { title: '角色管理', requiresAuth: true, allowClinic: false }
       },
       {
         path: 'schedule',
         name: 'Schedule',
         component: () => import('@/views/admin/Schedule.vue'),
-        meta: { title: '排班管理', requiresAuth: true }
+        meta: { title: '排班管理', requiresAuth: true, allowClinic: true }
       }
     ]
   }
@@ -71,6 +72,17 @@ router.beforeEach((to, from, next) => {
     next({ path: '/' })
     return
   }
+
+  // 门诊医生管理员权限拦截
+  if (hasToken()) {
+    const userStore = useUserStore()
+    if (userStore.isClinicAdmin && to.meta?.allowClinic === false) {
+      // 无权限，跳回工作台
+      next({ path: '/dashboard' })
+      return
+    }
+  }
+
   next()
 })
 

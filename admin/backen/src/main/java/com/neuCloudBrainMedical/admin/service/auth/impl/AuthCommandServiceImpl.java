@@ -61,7 +61,14 @@ public class AuthCommandServiceImpl implements IAuthCommandService {
 	}
 
 	private boolean passwordMatches(String rawPassword, String storedPassword) {
-		return StringUtils.hasText(rawPassword) && rawPassword.equals(storedPassword);
+		if (!StringUtils.hasText(rawPassword) || !StringUtils.hasText(storedPassword)) {
+			return false;
+		}
+		// 数据库存的是 {noop}前缀 + 明文，验证时去掉 {noop} 前缀，用户只需输入真实密码
+		String actualPassword = storedPassword.startsWith("{noop}")
+				? storedPassword.substring("{noop}".length())
+				: storedPassword;
+		return rawPassword.equals(actualPassword);
 	}
 
 	private LoginResponse toLoginResponse(SysUser user, RoleInfo role, String token) {

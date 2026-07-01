@@ -43,7 +43,7 @@ public class DepartmentResponseAssembler {
 		if (departments == null || departments.isEmpty()) return Collections.emptyList();
 		Map<Long, DepartmentTreeNode> map = new HashMap<>();
 		for (Department d : departments) {
-			map.put(d.getDeptId(), new DepartmentTreeNode(d.getDeptId(), d.getDeptCode(), d.getDeptName()));
+			map.put(d.getDeptId(), new DepartmentTreeNode(d.getDeptId(), d.getDeptCode(), d.getDeptName(), deptTypeToChinese(d.getDeptType())));
 		}
 		List<DepartmentTreeNode> roots = new ArrayList<>();
 		for (Department d : departments) {

@@ -36,6 +36,7 @@ import java.util.Objects;
 @Service
 public class DoctorCommandServiceImpl implements IDoctorCommandService {
 
+	private static final String NOOP_PREFIX = "{noop}";
 	private static final String DEFAULT_PASSWORD = "123456";
 
 	private static final java.util.Map<String, String> ROLE_PREFIX_MAP = java.util.Map.ofEntries(
@@ -97,6 +98,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		userReq.setPhone(request.getPhone());
 		userReq.setEmail(request.getEmail());
 		userReq.setStatus(Doctor.STATUS_ENABLED);
+		// 传明文给 UserCommandServiceImpl，由其统一加 {noop} 前缀存储
 		userReq.setPassword(hasText(request.getLoginPassword()) ? request.getLoginPassword() : DEFAULT_PASSWORD);
 		userReq.setUsername("TEMP_" + System.currentTimeMillis());
 		UserInfo userInfo = userCommandService.createUser(userReq);
@@ -105,7 +107,7 @@ public class DoctorCommandServiceImpl implements IDoctorCommandService {
 		Doctor doctor = new Doctor();
 		doctor.setUserId(userInfo.getUserId());
 		doctor.setDeptId(request.getDepartmentId());
-		doctor.setDoctorType(request.getDoctorType() != null ? request.getDoctorType() : "主治");
+		doctor.setDoctorType(request.getDoctorType() != null ? request.getDoctorType() : "OUTPATIENT");
 		doctor.setTitle(request.getTitle());
 		doctor.setSpecialty(request.getSpecialty());
 		doctor.setIntroduction(request.getIntroduction());

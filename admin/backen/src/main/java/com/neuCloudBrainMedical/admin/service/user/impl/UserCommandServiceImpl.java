@@ -15,10 +15,21 @@ import java.time.LocalDateTime;
 @Transactional
 public class UserCommandServiceImpl implements IUserCommandService {
 
+	private static final String NOOP_PREFIX = "{noop}";
+
 	private final SysUserMapper sysUserMapper;
 
 	public UserCommandServiceImpl(SysUserMapper sysUserMapper) {
 		this.sysUserMapper = sysUserMapper;
+	}
+
+	/**
+	 * 将原始密码加上 {noop} 前缀后存储，与 seed.sql 预置数据格式保持一致。
+	 * 如果已经带 {noop} 前缀，则不重复添加。
+	 */
+	private String encodePassword(String rawPassword) {
+		if (rawPassword == null) return null;
+		return rawPassword.startsWith(NOOP_PREFIX) ? rawPassword : NOOP_PREFIX + rawPassword;
 	}
 
 	@Override
@@ -27,7 +38,7 @@ public class UserCommandServiceImpl implements IUserCommandService {
 		SysUser user = new SysUser();
 		user.setRoleId(request.getRoleId());
 		user.setUsername(request.getUsername());
-		user.setPassword(request.getPassword());
+		user.setPassword(encodePassword(request.getPassword()));
 		user.setRealName(request.getRealName());
 		user.setPhone(request.getPhone());
 		user.setEmail(request.getEmail());
@@ -51,7 +62,7 @@ public class UserCommandServiceImpl implements IUserCommandService {
 			user.setUsername(request.getUsername()); changed = true;
 		}
 		if (request.getPassword() != null && !request.getPassword().equals(user.getPassword())) {
-			user.setPassword(request.getPassword()); changed = true;
+			user.setPassword(encodePassword(request.getPassword())); changed = true;
 		}
 		if (request.getRealName() != null && !request.getRealName().equals(user.getRealName())) {
 			user.setRealName(request.getRealName()); changed = true;
