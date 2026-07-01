@@ -241,8 +241,6 @@ import { listSchedules } from '@/api/schedule'
 const router = useRouter()
 const userStore = useUserStore()
 
-const isClinicAdmin = computed(() => userStore.isClinicAdmin)
-
 const stats = reactive({
   doctorCount: 0,
   departmentCount: 0,
@@ -253,8 +251,6 @@ const stats = reactive({
 
 const todayList = ref([])
 const departmentList = ref([])
-const allDoctors = ref([])
-const allDepartments = ref([])
 
 const deptColors = [
   '#409eff', '#67c23a', '#e6a23c', '#f56c6c',
@@ -333,60 +329,24 @@ async function loadStats() {
   const monthStart = fmtDate(new Date(now.getFullYear(), now.getMonth(), 1))
   const monthEnd = fmtDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
 
-  // 门诊医生管理员：预取医生和科室，用于后续按门诊类型过滤
-  let clinicDeptIds = null
-  let clinicDoctorIds = null
-  if (isClinicAdmin.value) {
-    try {
-      const deptArr = extractArray(await listDepartments())
-      allDepartments.value = deptArr
-      clinicDeptIds = new Set(deptArr.filter((d) => d.departmentType === '门诊').map((d) => d.id || d.deptId))
-    } catch { /* ignore */ }
-    try {
-      const docArr = extractArray(await listDoctors({ pageNum: 1, pageSize: 1000 }))
-      allDoctors.value = docArr
-      clinicDoctorIds = new Set(docArr.filter((d) => d.doctorType === '门诊医生').map((d) => d.doctorId))
-    } catch { /* ignore */ }
-  }
-
   // 医生总数
   try {
     const res = await listDoctors({ pageNum: 1, pageSize: 1 })
-    if (isClinicAdmin.value) {
-      // 门诊管理员：从预取的 allDoctors 中过滤统计门诊医生
-      const clinicDoctors = (allDoctors.value || []).filter((d) =>
-        (clinicDeptIds !== null ? clinicDeptIds.has(d.departmentId) : true) && d.doctorType === '门诊医生'
-      )
-      stats.doctorCount = clinicDoctors.length
-    } else {
-      stats.doctorCount = extractNumber(res, 'total')
-    }
+    stats.doctorCount = extractNumber(res, 'total')
   } catch { /* ignore */ }
 
   // 科室总数 + 科室分布
   try {
     const res = await listDepartments()
     const arr = extractArray(res)
-    if (isClinicAdmin.value) {
-      const filtered = arr.filter((d) => d.departmentType === '门诊')
-      departmentList.value = filtered.map((d) => ({ name: d.name || '-', type: d.departmentType || '科室' }))
-      stats.departmentCount = filtered.length || extractNumber(res, 'total')
-    } else {
-      departmentList.value = arr.map((d) => ({ name: d.name || '-', type: d.departmentType || d.type || '科室' }))
-      stats.departmentCount = arr.length || extractNumber(res, 'total')
-    }
+    departmentList.value = arr.map((d) => ({ name: d.name || '-', type: d.departmentType || d.type || '科室' }))
+    stats.departmentCount = arr.length || extractNumber(res, 'total')
   } catch { /* ignore */ }
 
   // 今日排班
   try {
     const arr = await listSchedules({ startDate: today, endDate: today })
     let list = extractArray(arr)
-    if (isClinicAdmin.value && clinicDeptIds !== null) {
-      list = list.filter((item) =>
-        clinicDeptIds.has(item.departmentId) &&
-        clinicDoctorIds.has(item.doctorId)
-      )
-    }
     todayList.value = list
     stats.todayScheduleCount = list.length
     const uniqueDoctors = new Set(list.map((i) => i.doctorId || i.doctorName).filter(Boolean))
@@ -397,12 +357,6 @@ async function loadStats() {
   try {
     const arr = await listSchedules({ startDate: monthStart, endDate: monthEnd })
     let list = extractArray(arr)
-    if (isClinicAdmin.value && clinicDeptIds !== null) {
-      list = list.filter((item) =>
-        clinicDeptIds.has(item.departmentId) &&
-        clinicDoctorIds.has(item.doctorId)
-      )
-    }
     stats.monthScheduleCount = list.length
   } catch { /* ignore */ }
 }

@@ -218,10 +218,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Download, RefreshLeft } from '@element-plus/icons-vue'
 import { listDoctors, createDoctor, updateDoctor, toggleDoctorStatus, checkDoctorDisable, exportDoctors, listDepartments, listDoctorRoles, deleteDoctor } from '@/api/doctor'
-import { useUserStore } from '@/stores/user'
-
-const userStore = useUserStore()
-const isClinicAdmin = computed(() => userStore.isClinicAdmin)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -302,10 +298,6 @@ const matchesDeptKeyword = (dept) => {
 
 const filteredDepartments = computed(() => {
   const list = (departments.value || []).filter(matchesDeptKeyword)
-  // 门诊医生管理员：只显示门诊类型的科室
-  if (isClinicAdmin.value) {
-    return list.filter((d) => d.departmentType === '门诊')
-  }
   return list
 })
 
@@ -334,14 +326,9 @@ const isSelectedRoleAdmin = computed(() => {
 // 编辑弹窗：科室下拉选项
 // - 若选中角色为管理员：只显示顶级科室（parentId == null）
 // - 否则：只显示叶子科室（没有子科室的科室）
-// - 门诊医生管理员：始终只显示门诊类型的科室
 const formDeptOptions = computed(() => {
   let list = departments.value || []
   if (!list.length) return []
-  // 门诊医生管理员：只显示门诊类型的科室
-  if (isClinicAdmin.value) {
-    list = list.filter((d) => d.departmentType === '门诊')
-  }
   if (isSelectedRoleAdmin.value) {
     // 管理员：只显示顶级科室
     return list.filter(d => d.parentId == null)
@@ -456,17 +443,6 @@ async function loadList() {
         tableData.value = tableData.value.filter((d) => d.doctorType === cnType)
         total.value = tableData.value.length
       }
-    }
-
-    // 门诊医生管理员：仅显示门诊科室下的门诊医生
-    if (isClinicAdmin.value) {
-      const clinicDeptIds = new Set(
-        (departments.value || []).filter((d) => d.departmentType === '门诊').map((d) => d.id)
-      )
-      tableData.value = tableData.value.filter((d) =>
-        clinicDeptIds.has(d.departmentId) && d.doctorType === '门诊医生'
-      )
-      total.value = tableData.value.length
     }
 
     // 从返回结果动态提取 title 的去重集合（doctorType 已由前端字典维护，不需提取）

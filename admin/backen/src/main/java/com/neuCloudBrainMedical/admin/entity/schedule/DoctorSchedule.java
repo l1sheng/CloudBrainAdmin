@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.entity.schedule;
+package com.neuCloudBrainMedical.admin.entity.schedule;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;

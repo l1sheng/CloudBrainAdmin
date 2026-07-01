@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.doctor;
+package com.neuCloudBrainMedical.admin.dto.doctor;
 
 /**
  * 医生信息 DTO（Service 间传递）。

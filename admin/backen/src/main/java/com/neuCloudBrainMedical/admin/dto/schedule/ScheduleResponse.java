@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.schedule;
+package com.neuCloudBrainMedical.admin.dto.schedule;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

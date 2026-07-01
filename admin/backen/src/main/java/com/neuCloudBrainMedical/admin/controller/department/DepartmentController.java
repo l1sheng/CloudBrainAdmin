@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.controller.department;
+package com.neuCloudBrainMedical.admin.controller.department;
 
 import com.neuCloudBrainMedical.admin.dto.department.DepartmentCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.department.DepartmentResponse;

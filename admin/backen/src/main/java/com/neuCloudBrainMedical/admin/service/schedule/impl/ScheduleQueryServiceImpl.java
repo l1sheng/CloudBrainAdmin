@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.service.schedule.impl;
+package com.neuCloudBrainMedical.admin.service.schedule.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.neuCloudBrainMedical.admin.dto.department.DepartmentResponse;

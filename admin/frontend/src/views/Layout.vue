@@ -94,10 +94,6 @@ const menuList = computed(() => {
     { path: '/schedule', title: '排班管理', icon: Calendar },
     { path: '/role', title: '角色管理', icon: Lock }
   ]
-  // 门诊医生管理员：隐藏角色管理
-  if (userStore.isClinicAdmin) {
-    return full.filter((m) => m.path !== '/role')
-  }
   return full
 })
 

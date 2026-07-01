@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.service.doctor.impl;
+package com.neuCloudBrainMedical.admin.service.doctor.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

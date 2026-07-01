@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.doctor;
+package com.neuCloudBrainMedical.admin.dto.doctor;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;

@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.department;
+package com.neuCloudBrainMedical.admin.dto.department;
 
 public class DepartmentOverviewBrief {
 

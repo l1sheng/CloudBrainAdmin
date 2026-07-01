@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.doctor;
+package com.neuCloudBrainMedical.admin.dto.doctor;
 
 public class DoctorOptionDTO {
 

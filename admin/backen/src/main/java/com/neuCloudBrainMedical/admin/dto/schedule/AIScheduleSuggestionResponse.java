@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.schedule;
+package com.neuCloudBrainMedical.admin.dto.schedule;
 
 import java.time.LocalDate;
 import java.util.List;

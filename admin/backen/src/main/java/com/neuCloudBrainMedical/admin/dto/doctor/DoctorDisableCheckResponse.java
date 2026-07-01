@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.doctor;
+package com.neuCloudBrainMedical.admin.dto.doctor;
 
 /**
  * 医生禁用前的关联数据检查结果。

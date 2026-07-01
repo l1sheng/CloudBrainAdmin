@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.controller.schedule;
+package com.neuCloudBrainMedical.admin.controller.schedule;
 
 import com.neuCloudBrainMedical.admin.dto.schedule.AIScheduleSuggestRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.AIScheduleSuggestionResponse;

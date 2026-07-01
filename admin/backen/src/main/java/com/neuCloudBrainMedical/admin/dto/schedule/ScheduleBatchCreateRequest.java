@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.schedule;
+package com.neuCloudBrainMedical.admin.dto.schedule;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

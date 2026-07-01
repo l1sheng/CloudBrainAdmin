@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.service.schedule;
+package com.neuCloudBrainMedical.admin.service.schedule;
 
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleBatchCreateRequest;
 import com.neuCloudBrainMedical.admin.dto.schedule.ScheduleCreateRequest;

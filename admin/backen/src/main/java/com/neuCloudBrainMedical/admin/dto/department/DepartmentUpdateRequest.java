@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.department;
+package com.neuCloudBrainMedical.admin.dto.department;
 
 /** 更新科室请求（所有字段均可选）。 */
 public class DepartmentUpdateRequest {

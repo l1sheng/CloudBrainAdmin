@@ -1,4 +1,4 @@
-﻿package com.neuCloudBrainMedical.admin.dto.auth;
+package com.neuCloudBrainMedical.admin.dto.auth;
 
 import jakarta.validation.constraints.NotBlank;
 
