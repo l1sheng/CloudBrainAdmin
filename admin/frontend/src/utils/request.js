@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const TOKEN_KEY = 'admin_token'
@@ -19,6 +19,10 @@ function clearAuth() {
   } catch {
     // ignore
   }
+}
+
+export function getLoginRedirectPath() {
+  return window.location.hash ? '/#/login' : '/login'
 }
 
 const request = axios.create({
@@ -50,11 +54,7 @@ request.interceptors.response.use(
       if (result.code === 401) {
         clearAuth()
         ElMessage.error(result.message || '登录已过期，请重新登录')
-        if (window.location.hash) {
-          window.location.href = '/#/login'
-        } else {
-          window.location.href = '/login'
-        }
+        window.location.href = getLoginRedirectPath()
         return Promise.reject(new Error(result.message || '未授权'))
       }
       ElMessage.error(result.message || '请求失败')
@@ -67,11 +67,7 @@ request.interceptors.response.use(
     if (status === 401) {
       clearAuth()
       ElMessage.error('登录已过期，请重新登录')
-      if (window.location.hash) {
-        window.location.href = '/#/login'
-      } else {
-        window.location.href = '/login'
-      }
+      window.location.href = getLoginRedirectPath()
     } else {
       ElMessage.error(error.message || '网络异常，请稍后重试')
     }

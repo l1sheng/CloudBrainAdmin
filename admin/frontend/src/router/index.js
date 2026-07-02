@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router'
 
 const routes = [
   {
@@ -47,9 +47,13 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createAppHistory(),
   routes
 })
+
+export function createAppHistory(mode = import.meta.env.MODE) {
+  return mode === 'test' ? createMemoryHistory() : createWebHistory()
+}
 
 function hasToken() {
   try {
