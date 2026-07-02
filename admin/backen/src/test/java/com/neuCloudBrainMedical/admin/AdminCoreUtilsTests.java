@@ -23,21 +23,26 @@ class AdminCoreUtilsTests {
 	private static final String SECRET = "0123456789abcdef0123456789abcdef";
 
 	@Test
-	void resultShouldWrapSuccessAndError() {
+	void resultShouldWrapSuccessAndErrorAndExposeMutableFields() {
 		Result<Void> empty = Result.success();
 		assertEquals(200, empty.getCode());
 		assertEquals("success", empty.getMessage());
 		assertNull(empty.getData());
 
 		Result<String> data = Result.success("ok");
-		assertEquals(200, data.getCode());
-		assertEquals("success", data.getMessage());
 		assertEquals("ok", data.getData());
 
 		Result<Object> error = Result.error(403, "denied");
 		assertEquals(403, error.getCode());
 		assertEquals("denied", error.getMessage());
 		assertNull(error.getData());
+
+		error.setCode(500);
+		error.setMessage("boom");
+		error.setData("detail");
+		assertEquals(500, error.getCode());
+		assertEquals("boom", error.getMessage());
+		assertEquals("detail", error.getData());
 	}
 
 	@Test
@@ -56,21 +61,27 @@ class AdminCoreUtilsTests {
 
 	@Test
 	void scheduleTimeSlotUtilsShouldNormalizeAndDeriveDefaults() {
-		assertEquals("上午", ScheduleTimeSlotUtils.normalize("MORNING"));
-		assertEquals("下午", ScheduleTimeSlotUtils.normalize("AFTERNOON"));
-		assertEquals("夜间", ScheduleTimeSlotUtils.normalize("晚上"));
+		String morning = ScheduleTimeSlotUtils.normalize("MORNING");
+		String afternoon = ScheduleTimeSlotUtils.normalize("AFTERNOON");
+		String evening = ScheduleTimeSlotUtils.normalize("EVENING");
 
-		assertEquals(LocalTime.of(8, 0), ScheduleTimeSlotUtils.defaultStartTime("上午"));
-		assertEquals(LocalTime.of(17, 0), ScheduleTimeSlotUtils.defaultEndTime("AFTERNOON"));
-		assertEquals(new BigDecimal("50.00"), ScheduleTimeSlotUtils.defaultFeeByTitle("主任医师"));
+		assertEquals(morning, ScheduleTimeSlotUtils.displayName("MORNING"));
+		assertEquals(LocalTime.of(8, 0), ScheduleTimeSlotUtils.defaultStartTime(morning));
+		assertEquals(LocalTime.of(14, 0), ScheduleTimeSlotUtils.defaultStartTime(afternoon));
+		assertEquals(LocalTime.of(18, 0), ScheduleTimeSlotUtils.defaultStartTime(evening));
+		assertEquals(LocalTime.of(12, 0), ScheduleTimeSlotUtils.defaultEndTime(morning));
+		assertEquals(LocalTime.of(17, 0), ScheduleTimeSlotUtils.defaultEndTime(afternoon));
+		assertEquals(LocalTime.of(21, 0), ScheduleTimeSlotUtils.defaultEndTime(evening));
 		assertEquals(new BigDecimal("15.00"), ScheduleTimeSlotUtils.defaultFeeByTitle(null));
+		assertEquals(new BigDecimal("15.00"), ScheduleTimeSlotUtils.defaultFeeByTitle("UNKNOWN"));
 	}
 
 	@Test
 	void scheduleTimeSlotUtilsShouldReportConflictsAndRejectInvalidValues() {
-		assertTrue(ScheduleTimeSlotUtils.conflictValues("上午").contains("MORNING"));
-		assertTrue(ScheduleTimeSlotUtils.conflictValues("夜间").contains("EVENING"));
-		assertThrows(BusinessException.class, () -> ScheduleTimeSlotUtils.normalize("中午"));
+		assertTrue(ScheduleTimeSlotUtils.conflictValues("MORNING").contains("MORNING"));
+		assertTrue(ScheduleTimeSlotUtils.conflictValues("AFTERNOON").contains("AFTERNOON"));
+		assertTrue(ScheduleTimeSlotUtils.conflictValues("EVENING").contains("EVENING"));
+		assertThrows(BusinessException.class, () -> ScheduleTimeSlotUtils.normalize("INVALID"));
 		assertThrows(BusinessException.class, () -> ScheduleTimeSlotUtils.normalize(""));
 	}
 

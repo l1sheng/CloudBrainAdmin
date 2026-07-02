@@ -140,6 +140,7 @@
           </execution>
           <execution>
             <id>check</id>
+            <phase>test</phase>
             <goals>
               <goal>check</goal>
             </goals>
@@ -151,7 +152,17 @@
                     <limit>
                       <counter>INSTRUCTION</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.00</minimum>
+                      <minimum>0.90</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+                <rule>
+                  <element>CLASS</element>
+                  <limits>
+                    <limit>
+                      <counter>INSTRUCTION</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.90</minimum>
                     </limit>
                   </limits>
                 </rule>
