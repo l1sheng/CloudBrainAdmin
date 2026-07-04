@@ -12,6 +12,7 @@ import java.time.LocalTime;
 public class DoctorSchedule {
 
 	public static final String STATUS_ACTIVE = "可预约";
+	public static final String STATUS_FULL = "约满";
 	public static final String STATUS_CANCELLED = "已停诊";
 	public static final String STATUS_EXPIRED = "已过期";
 

@@ -321,10 +321,10 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 		return count != null ? count : 0L;
 	}
 
-	/** 自动将已过期的可预约排班标记为"已过期"。 */
+	/** 自动将已过期的可预约/约满排班标记为"已过期"。 */
 	void expireOutdatedSchedules() {
 		LambdaQueryWrapper<DoctorSchedule> wrapper = new LambdaQueryWrapper<>();
-		wrapper.eq(DoctorSchedule::getStatus, DoctorSchedule.STATUS_ACTIVE)
+		wrapper.in(DoctorSchedule::getStatus, DoctorSchedule.STATUS_ACTIVE, DoctorSchedule.STATUS_FULL)
 				.lt(DoctorSchedule::getWorkDate, LocalDate.now());
 		List<DoctorSchedule> expired = scheduleMapper.selectList(wrapper);
 		if (expired != null && !expired.isEmpty()) {
