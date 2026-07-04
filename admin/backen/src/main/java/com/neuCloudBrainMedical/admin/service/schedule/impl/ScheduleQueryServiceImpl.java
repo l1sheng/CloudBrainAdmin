@@ -219,9 +219,22 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 		for (Registration r : registrations) {
 			if (r.getPatientId() != null) patientIds.add(r.getPatientId());
 		}
-		Map<Long, UserInfo> userMap = patientIds.isEmpty()
+
+		Map<Long, Long> patientUserMap = new HashMap<>();
+		if (!patientIds.isEmpty()) {
+			Map<Long, Map<String, Object>> rows = registrationMapper.getUserIdMapByPatientIds(new ArrayList<>(patientIds));
+			for (Map.Entry<Long, Map<String, Object>> entry : rows.entrySet()) {
+				Object uid = entry.getValue().get("user_id");
+				if (uid != null) {
+					patientUserMap.put(entry.getKey(), Long.valueOf(uid.toString()));
+				}
+			}
+		}
+
+		Set<Long> userIds = new HashSet<>(patientUserMap.values());
+		Map<Long, UserInfo> userMap = userIds.isEmpty()
 				? Collections.emptyMap()
-				: userQueryService.findUsersByIds(patientIds);
+				: userQueryService.findUsersByIds(userIds);
 
 		List<ScheduleRegistrationResponse> result = new ArrayList<>(registrations.size());
 		for (Registration registration : registrations) {
@@ -235,8 +248,11 @@ public class ScheduleQueryServiceImpl implements IScheduleQueryService {
 			resp.setSource(registration.getSource());
 			resp.setStatus(registration.getStatus());
 			resp.setRegisteredAt(registration.getRegisteredAt());
-			UserInfo user = userMap.get(registration.getPatientId());
-			if (user != null) resp.setPatientName(user.getRealName());
+			Long userId = patientUserMap.get(registration.getPatientId());
+			if (userId != null) {
+				UserInfo user = userMap.get(userId);
+				if (user != null) resp.setPatientName(user.getRealName());
+			}
 			result.add(resp);
 		}
 		return result;
